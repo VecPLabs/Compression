@@ -1,0 +1,200 @@
+[
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 44.17586783669767,
+    "mean_kl": 0.02072158529404078,
+    "top1_agreement": 0.8828125,
+    "persistent_ratio": 6.807001994238865,
+    "name": "all-4bit",
+    "allocation": [
+      8,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "relative_ppl": 0.004933821571902142
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 44.619207497420085,
+    "mean_kl": 0.025542465307808015,
+    "top1_agreement": 0.8984375,
+    "persistent_ratio": 7.057201929703653,
+    "name": "L1=3b",
+    "allocation": [
+      8,
+      3,
+      4,
+      4,
+      4,
+      4
+    ],
+    "relative_ppl": 0.015019124732241096
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 46.63554214444661,
+    "mean_kl": 0.0393344720555433,
+    "top1_agreement": 0.8984375,
+    "persistent_ratio": 7.326496541855473,
+    "name": "L1=2b",
+    "allocation": [
+      8,
+      2,
+      4,
+      4,
+      4,
+      4
+    ],
+    "relative_ppl": 0.06088767201001377
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 45.170672968473305,
+    "mean_kl": 0.020949367593289026,
+    "top1_agreement": 0.8828125,
+    "persistent_ratio": 7.057201929703653,
+    "name": "L2=3b",
+    "allocation": [
+      8,
+      4,
+      3,
+      4,
+      4,
+      4
+    ],
+    "relative_ppl": 0.02756412566666744
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 46.89553066253757,
+    "mean_kl": 0.03623439665642536,
+    "top1_agreement": 0.84375,
+    "persistent_ratio": 7.326496541855473,
+    "name": "L2=2b",
+    "allocation": [
+      8,
+      4,
+      2,
+      4,
+      4,
+      4
+    ],
+    "relative_ppl": 0.06680201547047027
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 45.11975373589278,
+    "mean_kl": 0.04565139743863256,
+    "top1_agreement": 0.8359375,
+    "persistent_ratio": 7.057201929703653,
+    "name": "L3=3b",
+    "allocation": [
+      8,
+      4,
+      4,
+      3,
+      4,
+      4
+    ],
+    "relative_ppl": 0.026405790550811492
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 53.19882067086243,
+    "mean_kl": 0.14647905422316398,
+    "top1_agreement": 0.7578125,
+    "persistent_ratio": 7.326496541855473,
+    "name": "L3=2b",
+    "allocation": [
+      8,
+      4,
+      4,
+      2,
+      4,
+      4
+    ],
+    "relative_ppl": 0.21019227867837942
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 44.19028088437262,
+    "mean_kl": 0.025472312616329873,
+    "top1_agreement": 0.9140625,
+    "persistent_ratio": 7.057201929703653,
+    "name": "L4=3b",
+    "allocation": [
+      8,
+      4,
+      4,
+      4,
+      3,
+      4
+    ],
+    "relative_ppl": 0.00526169649071595
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 45.81218860178518,
+    "mean_kl": 0.06103513159087015,
+    "top1_agreement": 0.859375,
+    "persistent_ratio": 7.326496541855473,
+    "name": "L4=2b",
+    "allocation": [
+      8,
+      4,
+      4,
+      4,
+      2,
+      4
+    ],
+    "relative_ppl": 0.042157630866505924
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 44.35588904117161,
+    "mean_kl": 0.02506323556258394,
+    "top1_agreement": 0.8671875,
+    "persistent_ratio": 7.057201929703653,
+    "name": "L5=3b",
+    "allocation": [
+      8,
+      4,
+      4,
+      4,
+      4,
+      3
+    ],
+    "relative_ppl": 0.009029030242045932
+  },
+  {
+    "tokens": 128,
+    "baseline_ppl": 43.95898206271777,
+    "compressed_ppl": 44.856678143719925,
+    "mean_kl": 0.0372248778426183,
+    "top1_agreement": 0.8359375,
+    "persistent_ratio": 7.326496541855473,
+    "name": "L5=2b",
+    "allocation": [
+      8,
+      4,
+      4,
+      4,
+      4,
+      2
+    ],
+    "relative_ppl": 0.020421220849049293
+  }
+]

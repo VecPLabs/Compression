@@ -1,0 +1,26 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B",
+  "model_revision": "060db6499f32faf8b98477b0a26969ef7d8b9987",
+  "prefix": 32,
+  "steps": 256,
+  "bits": 3,
+  "device": "NVIDIA GeForce RTX 4070 Ti SUPER",
+  "torch_version": "2.11.0+cu128",
+  "cuda_version": "12.8",
+  "native": {
+    "seconds": 8.355096100014634,
+    "tokens_per_second": 30.639982704633596,
+    "resident_bytes_above_model": 13411328,
+    "generation_peak_bytes_above_model": 16836096
+  },
+  "reference_compressed": {
+    "seconds": 21.48208829999203,
+    "tokens_per_second": 11.916904745247463,
+    "resident_bytes_above_model": 3843072,
+    "generation_peak_bytes_above_model": 7267840,
+    "estimated_persistent_payload_bytes": 2504448,
+    "fp16_kv_bytes": 3538944
+  },
+  "throughput_ratio": 0.38893314203618345,
+  "warning": "The reference path materializes a standard FP16 K/V cache; payload compression is not resident VRAM compression."
+}

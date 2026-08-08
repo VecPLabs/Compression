@@ -30,10 +30,13 @@ eval = [
 [project.scripts]
 gihkcc-benchmark = "benchmark_compression:main"
 gihkcc-downstream = "benchmark_downstream:main"
+gihkcc-runtime = "benchmark_runtime:main"
+gihkcc-blockwise = "benchmark_blockwise:main"
+gihkcc-blockwise-generation = "validate_blockwise_generation:main"
 
 [tool.setuptools]
-py-modules = ["benchmark_compression", "benchmark_downstream", "benchmark_real_residual", "sweep_layer_bits", "validate_autoregressive", "gihkcc", "gihkcc_v2", "gihkcc_hf", "kvtc", "pca_layer", "ternary", "turboquant", "turboquant_paper"]
+py-modules = ["benchmark_blockwise", "benchmark_compression", "benchmark_downstream", "benchmark_real_residual", "benchmark_runtime", "blockwise_attention", "blockwise_generation", "sweep_layer_bits", "validate_autoregressive", "validate_blockwise_generation", "gihkcc", "gihkcc_v2", "gihkcc_hf", "kvtc", "pca_layer", "ternary", "turboquant", "turboquant_paper"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"
-testpaths = ["test_gihkcc.py", "test_gihkcc_v2.py", "test_kvtc.py", "test_turboquant_paper.py"]
+testpaths = ["test_blockwise_attention.py", "test_gihkcc.py", "test_gihkcc_v2.py", "test_kvtc.py", "test_turboquant_paper.py"]

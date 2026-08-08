@@ -148,25 +148,58 @@ perplexity versus 12.1769 baseline (+4.63%), 0.071094 mean logit KL, and
 86.33% top-1 agreement. Middle-out measured 12.72x/+4.99%, 0.070216 KL, and
 84.38% top-1 agreement. The second anchor was well amortized, but it still did
 not beat forward-adjacent prediction. The validator accepts `--device`; this
-run used CPU because the local PyTorch installation lacks CUDA support.
+historical run used CPU. The project environment now uses PyTorch 2.11.0 with
+CUDA 12.8, and cache reconstruction explicitly transfers captured CPU
+residuals back to the model device.
 
-The same Pythia-410M adjacent 2-bit configuration was extended to 1,024
-WikiText-2 tokens using the validator's `--incremental` path. It retained
-14.12x compression with 11.9055 perplexity versus 11.1973 baseline (+6.32%),
-0.064923 mean logit KL, and 87.79% top-1 agreement. Incremental validation
-compresses only each new token, replaces the uncompressed cache entry with K/V
-projected from its decoded residual, and performs one full-history payload
-accounting pass at the end. A reference comparison matched rounded perplexity,
-ratio, and top-1 results.
+The same Pythia-410M adjacent 2-bit configuration was evaluated on five
+non-overlapping 1,024-token WikiText-2 windows using the validator's
+`--incremental` path. It retained 14.12x compression with an equal-token
+aggregate perplexity of 14.1941 versus 13.1615 baseline (+7.85%). Per-window
+changes ranged from +6.70% to +8.85%; mean KL was 0.07787 and mean top-1
+agreement was 85.86%. Incremental validation compresses only each new token,
+replaces the uncompressed cache entry with K/V projected from its decoded
+residual, and performs one full-history payload accounting pass at the end.
 
 `benchmark_downstream.py` performs live compressed-cache scoring on standard
-tasks. A quick Pythia-410M sample gave equal aggregate LAMBADA exact match on
-50 examples (50.0% native and 50.0% adjacent 2-bit). On 25 HellaSwag validation
-examples, normalized multiple-choice accuracy was 16% native and 20% compressed.
-These small samples show no detected task regression, but the HellaSwag result
-is near chance and has high sampling uncertainty; neither result should be
-treated as a full benchmark score. Every continuation token after prefill is
-scored with the newly appended K/V replaced by the decoded compressed entry.
+tasks and supports pinned model revisions, deterministic random sampling,
+Wilson confidence intervals, resumable offsets, and JSON output. Paired CUDA
+evaluation measured LAMBADA 493/1000 native versus 492/1000 compressed,
+HellaSwag 41/100 versus 41/100, ARC-Easy 45/100 versus 44/100, and
+ARC-Challenge 30/100 versus 29/100. The aggregate difference is -3 correct
+decisions over 1,300 examples. See `results/README.md` and its source JSON
+artifacts for protocols, confidence intervals, agreement rates, and caveats.
+
+Cross-architecture validation on Qwen2.5-0.5B passed exact lossless cache
+parity but exposed a structural limitation: its 14-query/2-KV-head GQA cache
+is already much narrower than the residual stream. At 256 tokens, adjacent
+GIHKCC measured 2.01x/+11.63% at 2 bits, 1.42x/+2.49% at 3 bits, and
+1.09x/-0.35% at 4 bits. The method is therefore attractive on wide MHA caches
+such as Pythia, but not directly on aggressively grouped-query caches.
+
+CUDA systems measurements also separate payload size from implementation
+performance. The current reference path achieved 16.18 tokens/s versus 56.69
+native on Pythia-410M and 11.92 versus 30.64 on Qwen. It reconstructs a normal
+FP16 K/V cache, so it does not yet deliver production resident-VRAM savings.
+See `results/README.md` for the pinned measurements and limitations.
+
+A packed blockwise-attention prototype now demonstrates actual tensor-resident
+compression on Pythia-410M. At 1,024 tokens, packed indices plus FP16 norms
+occupied 7.13 MB versus 100.66 MB of FP16 K/V (14.12x). Online blockwise
+softmax reduced deepest-layer temporary allocation from 151.01 MB to 43.85 MB
+with 256-token blocks, while taking 56.9 ms versus 31.3 ms and matching the
+materialized compressed-attention output within 6.1e-5. A 64-token block cut
+temporary peak to 13.40 MB at substantially higher Python prototype latency.
+This validates the memory mechanism at one attention layer; it is not yet an
+end-to-end fused generation kernel.
+
+End-to-end GPT-NeoX integration now runs all attention layers directly over the
+packed history without creating historical K/V. On a 32-token prefix plus 256
+WikiText-2 tokens, Pythia-410M measured 14.12x resident-history compression,
+12.2199 baseline versus 12.8906 packed perplexity (+5.49%), 87.89% top-1
+agreement, and 39.96 MB temporary peak above the model/packed baseline. The
+unfused Python path achieved 3.44 tokens/s versus 48.90 native, making kernel
+fusion—not compression quality or memory representation—the immediate blocker.
 
 A one-layer-at-a-time precision sweep is available through
 `sweep_layer_bits.py`. On the 128-token diagnostic, late layers appeared safe

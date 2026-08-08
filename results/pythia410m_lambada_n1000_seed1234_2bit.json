@@ -1,0 +1,33 @@
+{
+  "timestamp_utc": "2026-08-08T14:17:49.987204+00:00",
+  "model": "EleutherAI/pythia-410m",
+  "model_revision": "9879c9b5f8bea9051dcb0e68dff21493d67e9d4f",
+  "task": "lambada",
+  "limit": 1000,
+  "seed": 1234,
+  "bits": 2,
+  "prediction": "adjacent",
+  "device": "cuda",
+  "torch_version": "2.11.0+cu128",
+  "cuda_version": "12.8",
+  "result": {
+    "dataset": "EleutherAI/lambada_openai",
+    "split": "test",
+    "dataset_fingerprint": "b7a20cd35991215a",
+    "examples": 1000,
+    "native_correct": 493,
+    "native_exact": 0.493,
+    "native_95ci": [
+      0.4620988422512973,
+      0.5239547343289122
+    ],
+    "compressed_correct": 492,
+    "compressed_exact": 0.492,
+    "compressed_95ci": [
+      0.46110359363184095,
+      0.5229576367455414
+    ],
+    "correctness_agreement_count": 945,
+    "correctness_agreement": 0.945
+  }
+}

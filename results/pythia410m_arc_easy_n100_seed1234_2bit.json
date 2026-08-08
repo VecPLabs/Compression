@@ -1,0 +1,35 @@
+{
+  "timestamp_utc": "2026-08-08T14:50:17.055462+00:00",
+  "model": "EleutherAI/pythia-410m",
+  "model_revision": "9879c9b5f8bea9051dcb0e68dff21493d67e9d4f",
+  "task": "arc_easy",
+  "limit": 100,
+  "offset": 0,
+  "seed": 1234,
+  "bits": 2,
+  "prediction": "adjacent",
+  "device": "cuda",
+  "torch_version": "2.11.0+cu128",
+  "cuda_version": "12.8",
+  "result": {
+    "dataset": "allenai/ai2_arc",
+    "config": "ARC-Easy",
+    "split": "validation",
+    "dataset_fingerprint": "85bbde565a00cd05",
+    "examples": 100,
+    "native_correct": 45,
+    "native_accuracy": 0.45,
+    "native_95ci": [
+      0.3561437510640346,
+      0.5475557296835656
+    ],
+    "compressed_correct": 44,
+    "compressed_accuracy": 0.44,
+    "compressed_95ci": [
+      0.34671865400968327,
+      0.537720722887437
+    ],
+    "choice_agreement_count": 93,
+    "choice_agreement": 0.93
+  }
+}

@@ -25,7 +25,10 @@ def project_neox_kv(model, residuals: List[torch.Tensor]):
     keys, values = [], []
     for layer, residual in zip(model.gpt_neox.layers, residuals):
         dtype = next(layer.parameters()).dtype
-        hidden = layer.input_layernorm(residual.unsqueeze(0).to(dtype=dtype))
+        device = next(layer.parameters()).device
+        hidden = layer.input_layernorm(
+            residual.unsqueeze(0).to(device=device, dtype=dtype)
+        )
         qkv = layer.attention.query_key_value(hidden)
         heads = model.config.num_attention_heads
         head_dim = layer.attention.head_size

@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 import argparse
+import json
 import math
 from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import List
 
 import torch
 import torch.nn.functional as F
 from transformers.cache_utils import DynamicCache
 from transformers.models.gpt_neox.modeling_gpt_neox import apply_rotary_pos_emb
+from transformers.models.qwen2.modeling_qwen2 import (
+    apply_rotary_pos_emb as apply_qwen2_rotary_pos_emb,
+)
 
 from gihkcc_v2 import (
     GIHKCCV2Config,
@@ -38,18 +44,32 @@ downstream computation continues to make the same decisions.
 """
 
 
+def decoder_layers(model):
+    if hasattr(model, "gpt_neox"):
+        return model.gpt_neox.layers
+    if hasattr(model, "model") and hasattr(model.model, "layers"):
+        return model.model.layers
+    raise TypeError(f"unsupported model architecture: {model.__class__.__name__}")
+
+
 @contextmanager
-def capture_layer_inputs(model, capture_point: str = "residual"):
+def capture_layer_inputs(
+    model, capture_point: str = "residual", storage_device="cpu"
+):
     captured = []
     hooks = []
-    for layer in model.gpt_neox.layers:
+    for layer in decoder_layers(model):
         module = (
             layer if capture_point == "residual"
-            else layer.attention.query_key_value
+            else (
+                layer.attention.query_key_value
+                if hasattr(layer, "attention")
+                else layer.self_attn.q_proj
+            )
         )
         hooks.append(module.register_forward_pre_hook(
             lambda hooked_module, arguments: captured.append(
-                arguments[0][0].detach().cpu()
+                arguments[0][0].detach().to(storage_device)
             )
         ))
     try:
@@ -73,23 +93,39 @@ def append_neox_cache(
     capture_point: str = "residual", start_position: int = 0,
 ) -> None:
     """Project decoded residuals and append their K/V at absolute positions."""
-    for layer_idx, (layer, residual) in enumerate(zip(model.gpt_neox.layers, residuals)):
+    for layer_idx, (layer, residual) in enumerate(zip(decoder_layers(model), residuals)):
         dtype = next(layer.parameters()).dtype
-        hidden = residual.unsqueeze(0).to(dtype=dtype)
+        device = next(layer.parameters()).device
+        hidden = residual.unsqueeze(0).to(device=device, dtype=dtype)
         if capture_point == "residual":
             hidden = layer.input_layernorm(hidden)
-        qkv = layer.attention.query_key_value(hidden)
-        qkv = qkv.view(
-            1, residual.shape[0], model.config.num_attention_heads,
-            3 * layer.attention.head_size,
-        ).transpose(1, 2)
-        query, key, value = qkv.chunk(3, dim=-1)
         positions = torch.arange(
             start_position, start_position + residual.shape[0],
             device=hidden.device,
         ).unsqueeze(0)
-        cos, sin = model.gpt_neox.rotary_emb(hidden, position_ids=positions)
-        _, key = apply_rotary_pos_emb(query, key, cos, sin)
+        if hasattr(layer, "attention"):
+            qkv = layer.attention.query_key_value(hidden)
+            qkv = qkv.view(
+                1, residual.shape[0], model.config.num_attention_heads,
+                3 * layer.attention.head_size,
+            ).transpose(1, 2)
+            query, key, value = qkv.chunk(3, dim=-1)
+            cos, sin = model.gpt_neox.rotary_emb(hidden, position_ids=positions)
+            _, key = apply_rotary_pos_emb(query, key, cos, sin)
+        else:
+            attention = layer.self_attn
+            head_dim = attention.head_dim
+            query = attention.q_proj(hidden).view(
+                1, residual.shape[0], model.config.num_attention_heads, head_dim
+            ).transpose(1, 2)
+            key = attention.k_proj(hidden).view(
+                1, residual.shape[0], model.config.num_key_value_heads, head_dim
+            ).transpose(1, 2)
+            value = attention.v_proj(hidden).view(
+                1, residual.shape[0], model.config.num_key_value_heads, head_dim
+            ).transpose(1, 2)
+            cos, sin = model.model.rotary_emb(hidden, position_ids=positions)
+            _, key = apply_qwen2_rotary_pos_emb(query, key, cos, sin)
         cache.update(key.detach(), value.detach(), layer_idx)
 
 
@@ -138,11 +174,12 @@ def compress_layernorm_aware(
     for layer_idx in range(1, len(residuals)):
         prediction = reconstructed[0]
         delta = residuals[layer_idx] - prediction
-        layer = model.gpt_neox.layers[layer_idx]
+        layer = decoder_layers(model)[layer_idx]
         dtype = next(layer.parameters()).dtype
+        device = next(layer.parameters()).device
         with torch.no_grad():
             target = layer.input_layernorm(
-                residuals[layer_idx].unsqueeze(0).to(dtype=dtype)
+                residuals[layer_idx].unsqueeze(0).to(device=device, dtype=dtype)
             )
         best_payload = best_restored = None
         best_error = math.inf
@@ -157,7 +194,7 @@ def compress_layernorm_aware(
             restored = prediction + paper_turboquant_decompress(payload)
             with torch.no_grad():
                 normalized = layer.input_layernorm(
-                    restored.unsqueeze(0).to(dtype=dtype)
+                    restored.unsqueeze(0).to(device=device, dtype=dtype)
                 )
                 error = (target - normalized).float().square().mean().item()
             if error < best_error:
@@ -170,8 +207,13 @@ def compress_layernorm_aware(
 
 
 def native_kv_bytes(model, tokens: int) -> int:
-    heads = model.config.num_attention_heads
-    head_dim = model.config.hidden_size // heads
+    heads = getattr(
+        model.config, "num_key_value_heads", model.config.num_attention_heads
+    )
+    head_dim = getattr(
+        model.config, "head_dim",
+        model.config.hidden_size // model.config.num_attention_heads,
+    )
     return model.config.num_hidden_layers * 2 * heads * head_dim * tokens * 2
 
 
@@ -291,12 +333,15 @@ def evaluate(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", default="EleutherAI/pythia-70m")
+    parser.add_argument("--revision")
     parser.add_argument(
         "--device", choices=("auto", "cpu", "cuda"), default="auto",
         help="Inference device; auto selects CUDA when available",
     )
     parser.add_argument("--prefix", type=int, default=32)
     parser.add_argument("--steps", type=int, default=64)
+    parser.add_argument("--token-offset", type=int, default=0)
+    parser.add_argument("--output", help="Write metadata and metrics as JSON")
     parser.add_argument("--bits", type=int, default=2)
     parser.add_argument(
         "--layer-bits",
@@ -327,7 +372,9 @@ def main() -> int:
     args = parser.parse_args()
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    load_kwargs = {"revision": args.revision} if args.revision else {}
+    tokenizer = AutoTokenizer.from_pretrained(args.model, **load_kwargs)
+    tokenizer.model_max_length = 10**9
     device = (
         "cuda" if args.device == "auto" and torch.cuda.is_available()
         else args.device if args.device != "auto" else "cpu"
@@ -337,7 +384,9 @@ def main() -> int:
             "CUDA was requested, but this PyTorch installation has no CUDA support"
         )
     dtype = torch.float16 if device == "cuda" else torch.float32
-    model = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype).to(device)
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model, dtype=dtype, **load_kwargs
+    ).to(device)
     model.eval()
     if args.wikitext:
         from datasets import load_dataset
@@ -346,18 +395,18 @@ def main() -> int:
     else:
         text = open(args.text_file, encoding="utf-8").read() if args.text_file else HELD_OUT_TEXT
     tokens = tokenizer(text, return_tensors="pt").input_ids.to(device)
-    needed = args.prefix + args.steps + 1
+    needed = args.token_offset + args.prefix + args.steps + 1
     if tokens.shape[1] < needed:
         repeats = math.ceil(needed / tokens.shape[1])
         tokens = tokens.repeat(1, repeats)
-    tokens = tokens[:, :needed]
+    tokens = tokens[:, args.token_offset:needed]
 
     parity_check(model, tokens, args.prefix, args.capture_point)
     allocation = (
         [int(value) for value in args.layer_bits.split(",")]
         if args.layer_bits else args.bits
     )
-    if isinstance(allocation, list) and len(allocation) != model.config.num_hidden_layers:
+    if isinstance(allocation, list) and len(allocation) != len(decoder_layers(model)):
         raise ValueError("--layer-bits must contain one value per model layer")
     result = evaluate(
         model, tokens, args.prefix, args.steps, allocation, args.capture_point,
@@ -377,6 +426,30 @@ def main() -> int:
     print(f"  mean logit KL:           {result['mean_kl']:.6f}")
     print(f"  top-1 agreement:         {result['top1_agreement']:.2%}")
     print(f"  persistent-cache ratio: {result['persistent_ratio']:.2f}x")
+    if args.output:
+        report = {
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "model": args.model,
+            "model_revision": args.revision,
+            "dataset": "Salesforce/wikitext",
+            "dataset_config": "wikitext-2-raw-v1",
+            "split": "validation",
+            "token_offset": args.token_offset,
+            "prefix": args.prefix,
+            "steps": args.steps,
+            "bits": allocation,
+            "prediction": args.prediction,
+            "capture_point": args.capture_point,
+            "incremental": args.incremental,
+            "device": device,
+            "torch_version": torch.__version__,
+            "cuda_version": torch.version.cuda,
+            "result": result,
+            "relative_ppl_change": relative,
+        }
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return 0
 
 

@@ -1,0 +1,27 @@
+{
+  "timestamp_utc": "2026-08-08T16:50:17.476041+00:00",
+  "model": "Qwen/Qwen2.5-0.5B",
+  "model_revision": "060db6499f32faf8b98477b0a26969ef7d8b9987",
+  "dataset": "Salesforce/wikitext",
+  "dataset_config": "wikitext-2-raw-v1",
+  "split": "validation",
+  "token_offset": 0,
+  "prefix": 32,
+  "steps": 256,
+  "bits": 2,
+  "prediction": "adjacent",
+  "capture_point": "residual",
+  "incremental": true,
+  "device": "cuda",
+  "torch_version": "2.11.0+cu128",
+  "cuda_version": "12.8",
+  "result": {
+    "tokens": 256,
+    "baseline_ppl": 5.833699379771796,
+    "compressed_ppl": 6.5123661270546425,
+    "mean_kl": 0.06242764414149349,
+    "top1_agreement": 0.8671875,
+    "persistent_ratio": 2.014866637516397
+  },
+  "relative_ppl_change": 0.11633557081054025
+}
