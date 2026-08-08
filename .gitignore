@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+
+# Local model artifacts and benchmark output
+*.pt
+*.pth
+*.safetensors
+checkpoints/
+results/
+

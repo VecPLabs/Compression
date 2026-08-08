@@ -601,17 +601,18 @@ def bitmap_pack_decode(bpt: BitmapPackedTensor, dtype: torch.dtype = torch.float
     total = bpt.total_elements
 
     # Unpack bitmap
-    nonzero_mask = torch.zeros(total, dtype=torch.bool)
-    for byte_idx in range(bpt.bitmap.numel()):
-        byte_val = bpt.bitmap[byte_idx].item()
-        for bit in range(8):
-            elem_idx = byte_idx * 8 + bit
-            if elem_idx < total:
-                nonzero_mask[elem_idx] = bool((byte_val >> (7 - bit)) & 1)
+    # Expand every byte in parallel. The previous nested Python loop was the
+    # dominant decode cost (seconds for a few MiB of coefficients).
+    shifts = torch.arange(7, -1, -1, dtype=torch.uint8, device=bpt.bitmap.device)
+    nonzero_mask = (
+        ((bpt.bitmap.unsqueeze(1) >> shifts) & 1).flatten()[:total].bool()
+    )
 
     # Reconstruct quantized tensor
     q_zero = int(round((0.0 - bpt.zero_point) / bpt.scale + qmin))
-    quantized = torch.full((total,), q_zero, dtype=torch.int8)
+    quantized = torch.full(
+        (total,), q_zero, dtype=torch.int8, device=bpt.packed_values.device
+    )
     quantized[nonzero_mask] = bpt.packed_values
 
     # Dequantize

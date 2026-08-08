@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gihkcc"
+version = "0.1.0"
+description = "Experimental hierarchical compression methods for transformer KV caches and residual streams"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary; free for non-commercial research" }
+authors = [{ name = "VecP Labs LLC" }]
+dependencies = [
+    "numpy>=1.26",
+    "torch>=2.2",
+]
+
+[project.optional-dependencies]
+hf = [
+    "accelerate>=0.30",
+    "transformers>=4.44",
+]
+dev = [
+    "pytest>=8",
+]
+eval = [
+    "datasets>=3",
+]
+
+[project.scripts]
+gihkcc-benchmark = "benchmark_compression:main"
+gihkcc-downstream = "benchmark_downstream:main"
+
+[tool.setuptools]
+py-modules = ["benchmark_compression", "benchmark_downstream", "benchmark_real_residual", "sweep_layer_bits", "validate_autoregressive", "gihkcc", "gihkcc_v2", "gihkcc_hf", "kvtc", "pca_layer", "ternary", "turboquant", "turboquant_paper"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["test_gihkcc.py", "test_gihkcc_v2.py", "test_kvtc.py", "test_turboquant_paper.py"]

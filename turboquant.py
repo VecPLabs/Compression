@@ -1,9 +1,12 @@
 """
-TurboQuant — Minimal Implementation for GIHKCC Integration
+TurboQuant-Inspired Rotated Uniform Quantizer — GIHKCC Integration
 
-Implements the core of Google's TurboQuant (ICLR 2026):
+Early prototype inspired by Google's TurboQuant (ICLR 2026):
   1. PolarQuant: Random orthogonal rotation → scalar quantization
   2. QJL: 1-bit Johnson-Lindenstrauss correction on quantization residual
+
+This module is retained as a baseline. The paper-reference Lloyd-Max and QJL
+implementation lives in turboquant_paper.py.
 
 The random rotation makes marginals approximately Gaussian (by CLT in
 high dimensions), which means a simple uniform scalar quantizer per

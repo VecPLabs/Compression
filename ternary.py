@@ -273,10 +273,12 @@ class XNORCompressedResiduals:
 
     # Stats
     n_layers: int = 0
+    quant_levels: int = 1
 
     @property
     def total_compressed_bytes(self) -> int:
-        anchor_bytes = math.ceil(self.anchor_ternary.numel() * 1.58 / 8) + 8
+        bits_per_value = math.log2(2 * self.quant_levels + 1)
+        anchor_bytes = math.ceil(self.anchor_ternary.numel() * bits_per_value / 8) + 8
         delta_bytes = sum(d.compressed_bytes for d in self.deltas)
         return anchor_bytes + delta_bytes
 
@@ -341,6 +343,7 @@ def xnor_compress_residuals(
         deltas=deltas,
         layer_scales=scales,
         n_layers=n,
+        quant_levels=1,
     )
 
 
@@ -443,6 +446,7 @@ def sigmadelta_compress_residuals(
         deltas=deltas,
         layer_scales=scales,
         n_layers=n,
+        quant_levels=levels,
     )
 
 
@@ -516,6 +520,7 @@ def quint5_compress_residuals(
         deltas=deltas,
         layer_scales=scales,
         n_layers=n,
+        quant_levels=levels,
     )
 
 
