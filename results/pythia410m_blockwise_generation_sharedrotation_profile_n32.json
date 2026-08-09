@@ -1,0 +1,40 @@
+{
+  "model": "EleutherAI/pythia-410m",
+  "model_revision": "9879c9b5f8bea9051dcb0e68dff21493d67e9d4f",
+  "prefix": 32,
+  "steps": 32,
+  "bits": 2,
+  "block_size": 256,
+  "baseline_ppl": 6.008843644902556,
+  "compressed_ppl": 6.073867667089743,
+  "mean_kl": 0.05878434732539972,
+  "top1_agreement": 0.96875,
+  "baseline_tokens_per_second": 47.37407009907409,
+  "compressed_tokens_per_second": 10.650614061154187,
+  "packed_resident_bytes": 445440,
+  "packed_logical_bytes": 445440,
+  "packed_capacity_tokens": 64,
+  "fp16_kv_bytes": 6291456,
+  "resident_ratio": 14.124137931034483,
+  "compressed_peak_bytes": 826867200,
+  "compressed_base_bytes": 821118976,
+  "compressed_peak_above_base_bytes": 5748224,
+  "historical_kv_materialized": false,
+  "phase_seconds": {
+    "tokenizer_load": 0.13399100000970066,
+    "model_load": 0.7238781000196468,
+    "token_cache_load": 0.00350550000439398,
+    "prefix_cache_load": 0.010169300017878413,
+    "prefix_forward": 0.24329769998439588,
+    "baseline_generation": 0.6754749999963678,
+    "compressed_generation": 3.004521599999862
+  },
+  "profiled_compressed_subphases": {
+    "forward_seconds": 2.2818141999596264,
+    "append_compression_seconds": 0.6865856000513304,
+    "forward_fraction": 0.7594600750947277,
+    "append_fraction": 0.22851744519039635,
+    "synchronization_changes_throughput": true
+  },
+  "relative_ppl_change": 0.010821386947278855
+}

@@ -1,0 +1,16 @@
+{
+  "model": "EleutherAI/pythia-410m",
+  "model_revision": "9879c9b5f8bea9051dcb0e68dff21493d67e9d4f",
+  "tokens": 1024,
+  "bits": 2,
+  "layer": 23,
+  "block_size": 256,
+  "packed_resident_bytes": 7127040,
+  "accounted_payload_bytes": 7127808,
+  "max_attention_error": 0.0,
+  "mean_attention_error": 0.0,
+  "materialized_seconds": 0.04416230000788346,
+  "blockwise_seconds": 0.03085149999242276,
+  "materialized_peak_temporary_bytes": 58734592,
+  "blockwise_peak_temporary_bytes": 18680832
+}

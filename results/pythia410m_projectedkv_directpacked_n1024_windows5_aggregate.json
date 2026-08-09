@@ -1,0 +1,100 @@
+{
+  "configurations": [
+    {
+      "key_bits": 8,
+      "value_bits": 4,
+      "hot_window": 32,
+      "page_size": 32,
+      "steps": 1024,
+      "repeat_count": 5,
+      "token_offsets": [
+        0,
+        1056,
+        2112,
+        3168,
+        4224
+      ],
+      "source_files": [
+        "pythia410m_projectedkv_directpacked_k8v4_hot32_n1024_r2.json",
+        "pythia410m_projectedkv_directpacked_k8v4_hot32_n1024_w1.json",
+        "pythia410m_projectedkv_directpacked_k8v4_hot32_n1024_w2.json",
+        "pythia410m_projectedkv_directpacked_k8v4_hot32_n1024_w3.json",
+        "pythia410m_projectedkv_directpacked_k8v4_hot32_n1024_w4.json"
+      ],
+      "resident_ratio": 2.3157894736842106,
+      "relative_ppl_change": {
+        "median": 0.001149891978090345,
+        "minimum": -0.002753525118351474,
+        "maximum": 0.002324808328936001
+      },
+      "mean_kl": {
+        "median": 0.002067540889105657,
+        "minimum": 0.001716804492411017,
+        "maximum": 0.002163057128238388
+      },
+      "top1_agreement": {
+        "median": 0.9765625,
+        "minimum": 0.970703125,
+        "maximum": 0.978515625
+      },
+      "compressed_tokens_per_second": {
+        "median": 25.769048436558794,
+        "minimum": 23.172976142301696,
+        "maximum": 27.289280265990584
+      },
+      "baseline_tokens_per_second": {
+        "median": 51.71646205248682,
+        "minimum": 31.909755521829883,
+        "maximum": 55.132394684872715
+      }
+    },
+    {
+      "key_bits": 6,
+      "value_bits": 4,
+      "hot_window": 32,
+      "page_size": 32,
+      "steps": 1024,
+      "repeat_count": 5,
+      "token_offsets": [
+        0,
+        1056,
+        2112,
+        3168,
+        4224
+      ],
+      "source_files": [
+        "pythia410m_projectedkv_directpacked_k6v4_hot32_n1024_r2.json",
+        "pythia410m_projectedkv_directpacked_k6v4_hot32_n1024_w1.json",
+        "pythia410m_projectedkv_directpacked_k6v4_hot32_n1024_w2.json",
+        "pythia410m_projectedkv_directpacked_k6v4_hot32_n1024_w3.json",
+        "pythia410m_projectedkv_directpacked_k6v4_hot32_n1024_w4.json"
+      ],
+      "resident_ratio": 2.693877551020408,
+      "relative_ppl_change": {
+        "median": 0.008128334455587582,
+        "minimum": 0.0024602505950639397,
+        "maximum": 0.012926688624266491
+      },
+      "mean_kl": {
+        "median": 0.006419083568792061,
+        "minimum": 0.005970722409410878,
+        "maximum": 0.007057947678410947
+      },
+      "top1_agreement": {
+        "median": 0.95703125,
+        "minimum": 0.953125,
+        "maximum": 0.958984375
+      },
+      "compressed_tokens_per_second": {
+        "median": 25.523170534932483,
+        "minimum": 23.298112472460684,
+        "maximum": 26.1208113646545
+      },
+      "baseline_tokens_per_second": {
+        "median": 50.07049108566593,
+        "minimum": 45.462992675632606,
+        "maximum": 51.59908798622055
+      }
+    }
+  ]
+}

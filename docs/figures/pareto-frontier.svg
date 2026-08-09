@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="620" viewBox="0 0 1100 620" role="img" aria-labelledby="title desc">
+  <title id="title">Quality compression throughput Pareto frontier</title>
+  <desc id="desc">K8 V4 hot 32 provides the best quality and throughput. K6 V4 hot 32 increases compression with modest perplexity change. Four-bit keys regress quality.</desc>
+  <defs><style>.title{font:600 25px system-ui,sans-serif;fill:#0f172a}.sub{font:400 14px system-ui,sans-serif;fill:#475569}.axis{font:400 13px system-ui,sans-serif;fill:#475569}.label{font:600 14px system-ui,sans-serif;fill:#0f172a}.note{font:400 12px system-ui,sans-serif;fill:#334155}</style></defs>
+  <rect width="1100" height="620" fill="#fff"/>
+  <text x="60" y="48" class="title">Projected K/V operating points</text>
+  <text x="60" y="74" class="sub">Lower perplexity change and farther-right compression are preferred; circle area reflects throughput.</text>
+  <rect x="105" y="105" width="900" height="410" fill="#f8fafc" stroke="#cbd5e1"/>
+  <g stroke="#e2e8f0"><line x1="105" y1="480" x2="1005" y2="480"/><line x1="105" y1="408" x2="1005" y2="408"/><line x1="105" y1="336" x2="1005" y2="336"/><line x1="105" y1="264" x2="1005" y2="264"/><line x1="105" y1="192" x2="1005" y2="192"/><line x1="105" y1="120" x2="1005" y2="120"/><line x1="330" y1="105" x2="330" y2="515"/><line x1="555" y1="105" x2="555" y2="515"/><line x1="780" y1="105" x2="780" y2="515"/></g>
+  <g class="axis">
+    <text x="105" y="540" text-anchor="middle">2.0×</text><text x="330" y="540" text-anchor="middle">2.2×</text><text x="555" y="540" text-anchor="middle">2.4×</text><text x="780" y="540" text-anchor="middle">2.6×</text><text x="1005" y="540" text-anchor="middle">2.8×</text>
+    <text x="92" y="485" text-anchor="end">0%</text><text x="92" y="413" text-anchor="end">2%</text><text x="92" y="341" text-anchor="end">4%</text><text x="92" y="269" text-anchor="end">6%</text><text x="92" y="197" text-anchor="end">8%</text><text x="92" y="125" text-anchor="end">10%</text>
+    <text x="555" y="580" text-anchor="middle">Cache-only compression ratio</text><text x="30" y="310" transform="rotate(-90 30 310)" text-anchor="middle">Relative perplexity change</text>
+  </g>
+  <circle cx="465" cy="476" r="28" fill="#2563eb" fill-opacity="0.78" stroke="#1d4ed8" stroke-width="2"/>
+  <text x="465" y="467" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="13" font-weight="600">K8/V4</text><text x="465" y="485" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="12">25.77</text>
+  <text x="270" y="390" class="label">Hot-32 quality point</text><text x="270" y="410" class="note">2.32× · +0.115% median PPL</text>
+
+  <circle cx="886" cy="451" r="27" fill="#16a34a" fill-opacity="0.78" stroke="#15803d" stroke-width="2"/>
+  <text x="886" y="442" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="13" font-weight="600">K6/V4</text><text x="886" y="460" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="12">25.52</text>
+  <text x="740" y="382" class="label">Balanced point</text><text x="740" y="402" class="note">2.69× · +0.813% median PPL</text>
+
+  <circle cx="574" cy="462" r="27" fill="#7c3aed" fill-opacity="0.72" stroke="#6d28d9" stroke-width="2"/>
+  <text x="574" y="453" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="13" font-weight="600">K8/V4</text><text x="574" y="471" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="12">25.79</text>
+  <text x="525" y="350" class="label">Hot-0 fully compressed</text><text x="525" y="370" class="note">2.42× · +0.50% PPL</text>
+
+  <circle cx="914" cy="154" r="23" fill="#dc2626" fill-opacity="0.72" stroke="#b91c1c" stroke-width="2"/>
+  <text x="914" y="149" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="12" font-weight="600">K4/V4</text><text x="914" y="166" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="11">16.75</text>
+  <text x="745" y="132" class="label">Rejected key precision</text><text x="745" y="151" class="note">2.72× · +9.05% PPL</text>
+
+  <text x="1005" y="603" text-anchor="end" class="note">Circle labels show decode tokens/s</text>
+</svg>

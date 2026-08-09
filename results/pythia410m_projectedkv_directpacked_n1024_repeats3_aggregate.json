@@ -1,0 +1,130 @@
+{
+  "configurations": [
+    {
+      "key_bits": 8,
+      "value_bits": 4,
+      "hot_window": 32,
+      "page_size": 32,
+      "steps": 1024,
+      "repeat_count": 3,
+      "token_offsets": [
+        0
+      ],
+      "source_files": [
+        "pythia410m_projectedkv_directpacked_k8v4_hot32_n1024_r1.json",
+        "pythia410m_projectedkv_directpacked_k8v4_hot32_n1024_r2.json",
+        "pythia410m_projectedkv_directpacked_k8v4_hot32_n1024_r3.json"
+      ],
+      "resident_ratio": 2.3157894736842106,
+      "relative_ppl_change": {
+        "median": 0.00043196609791595897,
+        "minimum": 0.00043196609791595897,
+        "maximum": 0.00043196609791595897
+      },
+      "mean_kl": {
+        "median": 0.002163057128238388,
+        "minimum": 0.002163057128238388,
+        "maximum": 0.002163057128238388
+      },
+      "top1_agreement": {
+        "median": 0.970703125,
+        "minimum": 0.970703125,
+        "maximum": 0.970703125
+      },
+      "compressed_tokens_per_second": {
+        "median": 27.289280265990584,
+        "minimum": 25.66337847197089,
+        "maximum": 27.33469062882467
+      },
+      "baseline_tokens_per_second": {
+        "median": 53.4820747827918,
+        "minimum": 49.329027435940766,
+        "maximum": 55.132394684872715
+      }
+    },
+    {
+      "key_bits": 8,
+      "value_bits": 4,
+      "hot_window": 0,
+      "page_size": 32,
+      "steps": 1024,
+      "repeat_count": 3,
+      "token_offsets": [
+        0
+      ],
+      "source_files": [
+        "pythia410m_projectedkv_directpacked_k8v4_hot0_n1024_r1.json",
+        "pythia410m_projectedkv_directpacked_k8v4_hot0_n1024_r2.json",
+        "pythia410m_projectedkv_directpacked_k8v4_hot0_n1024_r3.json"
+      ],
+      "resident_ratio": 2.4150943396226414,
+      "relative_ppl_change": {
+        "median": 0.005010644837070144,
+        "minimum": 0.005010644837070144,
+        "maximum": 0.005010644837070144
+      },
+      "mean_kl": {
+        "median": 0.0027375784773615575,
+        "minimum": 0.0027375784773615575,
+        "maximum": 0.0027375784773615575
+      },
+      "top1_agreement": {
+        "median": 0.9697265625,
+        "minimum": 0.9697265625,
+        "maximum": 0.9697265625
+      },
+      "compressed_tokens_per_second": {
+        "median": 25.794475773458664,
+        "minimum": 25.61146388332645,
+        "maximum": 26.502647852643562
+      },
+      "baseline_tokens_per_second": {
+        "median": 50.18858852265225,
+        "minimum": 48.893963632530955,
+        "maximum": 52.783884980923666
+      }
+    },
+    {
+      "key_bits": 6,
+      "value_bits": 4,
+      "hot_window": 32,
+      "page_size": 32,
+      "steps": 1024,
+      "repeat_count": 3,
+      "token_offsets": [
+        0
+      ],
+      "source_files": [
+        "pythia410m_projectedkv_directpacked_k6v4_hot32_n1024_r1.json",
+        "pythia410m_projectedkv_directpacked_k6v4_hot32_n1024_r2.json",
+        "pythia410m_projectedkv_directpacked_k6v4_hot32_n1024_r3.json"
+      ],
+      "resident_ratio": 2.693877551020408,
+      "relative_ppl_change": {
+        "median": 0.012926688624266491,
+        "minimum": 0.012926688624266491,
+        "maximum": 0.012926688624266491
+      },
+      "mean_kl": {
+        "median": 0.006419083568792061,
+        "minimum": 0.006419083568792061,
+        "maximum": 0.006419083568792061
+      },
+      "top1_agreement": {
+        "median": 0.955078125,
+        "minimum": 0.955078125,
+        "maximum": 0.955078125
+      },
+      "compressed_tokens_per_second": {
+        "median": 26.1208113646545,
+        "minimum": 23.724762450892765,
+        "maximum": 26.349776839502802
+      },
+      "baseline_tokens_per_second": {
+        "median": 51.59908798622055,
+        "minimum": 49.27303032985397,
+        "maximum": 53.08660091345427
+      }
+    }
+  ]
+}

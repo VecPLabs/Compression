@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Direct packed K/V attention architecture</title>
+  <desc id="desc">A token is projected once into key and value tensors. Recent tokens remain in an FP16 hot tail, completed cold pages are quantized asymmetrically, and a page-head parallel Triton kernel computes attention without materializing cold keys and values.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+    <style>
+      .title{font:600 25px system-ui,sans-serif;fill:#0f172a}.sub{font:400 14px system-ui,sans-serif;fill:#475569}.label{font:600 16px system-ui,sans-serif;fill:#0f172a}.small{font:400 13px system-ui,sans-serif;fill:#334155}.box{stroke:#94a3b8;stroke-width:1.5;rx:14}.line{stroke:#475569;stroke-width:2;fill:none;marker-end:url(#arrow)}.dashed{stroke:#64748b;stroke-width:1.5;stroke-dasharray:6 5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1200" height="520" fill="#ffffff"/>
+  <text x="50" y="48" class="title">Projected once, consumed while packed</text>
+  <text x="50" y="74" class="sub">The serving path removes historical LayerNorm and QKV reprojection.</text>
+
+  <rect x="50" y="135" width="190" height="105" class="box" fill="#eff6ff"/>
+  <text x="145" y="174" text-anchor="middle" class="label">Current token</text>
+  <text x="145" y="199" text-anchor="middle" class="small">LayerNorm + QKV once</text>
+  <text x="145" y="220" text-anchor="middle" class="small">post-RoPE key + value</text>
+
+  <rect x="330" y="100" width="210" height="105" class="box" fill="#ecfdf5"/>
+  <text x="435" y="137" text-anchor="middle" class="label">FP16 hot tail</text>
+  <text x="435" y="162" text-anchor="middle" class="small">Newest 32 tokens</text>
+  <text x="435" y="183" text-anchor="middle" class="small">Exact K/V tensors</text>
+
+  <rect x="330" y="250" width="210" height="105" class="box" fill="#fff7ed"/>
+  <text x="435" y="287" text-anchor="middle" class="label">Pending page</text>
+  <text x="435" y="312" text-anchor="middle" class="small">Exact until 32 tokens</text>
+  <text x="435" y="333" text-anchor="middle" class="small">Then quantized once</text>
+
+  <rect x="635" y="100" width="250" height="255" class="box" fill="#faf5ff"/>
+  <text x="760" y="138" text-anchor="middle" class="label">Contiguous cold pages</text>
+  <text x="760" y="169" text-anchor="middle" class="small">Keys: per-channel affine</text>
+  <text x="760" y="191" text-anchor="middle" class="small">K8 or K6 across each page</text>
+  <line x1="675" y1="215" x2="845" y2="215" stroke="#cbd5e1"/>
+  <text x="760" y="244" text-anchor="middle" class="small">Values: per-token/head</text>
+  <text x="760" y="266" text-anchor="middle" class="small">symmetric V4</text>
+  <line x1="675" y1="291" x2="845" y2="291" stroke="#cbd5e1"/>
+  <text x="760" y="321" text-anchor="middle" class="small">True bit-packed codes</text>
+  <text x="760" y="343" text-anchor="middle" class="small">FP16 scale metadata</text>
+
+  <rect x="970" y="135" width="180" height="185" class="box" fill="#fef2f2"/>
+  <text x="1060" y="171" text-anchor="middle" class="label">Triton attention</text>
+  <text x="1060" y="201" text-anchor="middle" class="small">One program per</text>
+  <text x="1060" y="222" text-anchor="middle" class="small">(page, head)</text>
+  <text x="1060" y="252" text-anchor="middle" class="small">packed QK scores</text>
+  <text x="1060" y="273" text-anchor="middle" class="small">online softmax</text>
+  <text x="1060" y="294" text-anchor="middle" class="small">packed V accumulation</text>
+
+  <path d="M240 187 H315" class="line"/>
+  <path d="M435 205 V235" class="line"/>
+  <path d="M540 302 H620" class="line"/>
+  <path d="M885 228 H955" class="line"/>
+  <path d="M540 152 C700 65,900 65,970 152" class="dashed"/>
+  <path d="M240 205 C560 470,900 460,1010 320" class="dashed"/>
+
+  <rect x="300" y="414" width="600" height="62" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="600" y="440" text-anchor="middle" class="label">Only page statistics leave the kernel</text>
+  <text x="600" y="462" text-anchor="middle" class="small">max · exponential denominator · weighted value accumulator</text>
+</svg>

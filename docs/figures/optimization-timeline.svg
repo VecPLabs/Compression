@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">Optimization timeline from residual reconstruction to packed K/V attention</title>
+  <desc id="desc">Throughput rises from 3.44 tokens per second for the initial packed residual implementation to 27.29 median tokens per second for direct packed K8 V4 attention at 1024 tokens.</desc>
+  <defs><style>.title{font:600 25px system-ui,sans-serif;fill:#0f172a}.sub{font:400 14px system-ui,sans-serif;fill:#475569}.axis{font:400 13px system-ui,sans-serif;fill:#475569}.label{font:600 13px system-ui,sans-serif;fill:#0f172a}.value{font:600 14px system-ui,sans-serif;fill:#0f172a}</style></defs>
+  <rect width="1200" height="560" fill="#fff"/>
+  <text x="55" y="48" class="title">Seven-fold speedup through representation-aware kernels</text>
+  <text x="55" y="74" class="sub">Pythia-410M, batch-one autoregressive validation; context lengths differ by milestone and are labeled.</text>
+  <line x1="100" y1="470" x2="1140" y2="470" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="100" y1="110" x2="100" y2="470" stroke="#94a3b8" stroke-width="1.5"/>
+  <g class="axis">
+    <text x="86" y="475" text-anchor="end">0</text><text x="86" y="415" text-anchor="end">5</text><text x="86" y="355" text-anchor="end">10</text><text x="86" y="295" text-anchor="end">15</text><text x="86" y="235" text-anchor="end">20</text><text x="86" y="175" text-anchor="end">25</text><text x="86" y="115" text-anchor="end">30</text>
+    <text x="28" y="290" transform="rotate(-90 28 290)" text-anchor="middle">Decode throughput (tokens/s)</text>
+  </g>
+  <g stroke="#e2e8f0"><line x1="100" y1="410" x2="1140" y2="410"/><line x1="100" y1="350" x2="1140" y2="350"/><line x1="100" y1="290" x2="1140" y2="290"/><line x1="100" y1="230" x2="1140" y2="230"/><line x1="100" y1="170" x2="1140" y2="170"/><line x1="100" y1="110" x2="1140" y2="110"/></g>
+  <polyline points="155,429 305,391 455,347 605,331 755,313 905,175 1080,143" fill="none" stroke="#2563eb" stroke-width="4"/>
+  <g fill="#2563eb" stroke="#fff" stroke-width="3">
+    <circle cx="155" cy="429" r="8"/><circle cx="305" cy="391" r="8"/><circle cx="455" cy="347" r="8"/><circle cx="605" cy="331" r="8"/><circle cx="755" cy="313" r="8"/><circle cx="905" cy="175" r="8"/><circle cx="1080" cy="143" r="9"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="155" y="412" class="value">3.44</text><text x="155" y="497" class="label">Packed residual</text><text x="155" y="517" class="axis">256 tokens</text>
+    <text x="305" y="374" class="value">6.56</text><text x="305" y="497" class="label">One rotation</text><text x="305" y="517" class="axis">256 tokens</text>
+    <text x="455" y="330" class="value">10.28</text><text x="455" y="497" class="label">Fused chain</text><text x="455" y="517" class="axis">256 tokens</text>
+    <text x="605" y="314" class="value">11.57</text><text x="605" y="497" class="label">Shared encode</text><text x="605" y="517" class="axis">256 tokens</text>
+    <text x="755" y="296" class="value">13.05</text><text x="755" y="497" class="label">Fused SDPA</text><text x="755" y="517" class="axis">256 tokens</text>
+    <text x="905" y="158" class="value">24.61</text><text x="905" y="497" class="label">Packed K/V kernel</text><text x="905" y="517" class="axis">256 tokens</text>
+    <text x="1080" y="126" class="value">27.29</text><text x="1080" y="497" class="label">Long-context median</text><text x="1080" y="517" class="axis">1,024 tokens</text>
+  </g>
+  <text x="1080" y="92" text-anchor="middle" class="sub">7.9× vs initial path</text>
+</svg>

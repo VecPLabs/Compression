@@ -1,0 +1,33 @@
+{
+  "model": "EleutherAI/pythia-410m",
+  "model_revision": "9879c9b5f8bea9051dcb0e68dff21493d67e9d4f",
+  "prefix": 32,
+  "steps": 256,
+  "bits": 2,
+  "block_size": 256,
+  "baseline_ppl": 12.219877563110654,
+  "compressed_ppl": 12.967697946979508,
+  "mean_kl": 0.07265786155198839,
+  "top1_agreement": 0.87890625,
+  "baseline_tokens_per_second": 49.970323288558085,
+  "compressed_tokens_per_second": 10.32187030902844,
+  "packed_resident_bytes": 2004480,
+  "packed_logical_bytes": 2004480,
+  "packed_capacity_tokens": 288,
+  "fp16_kv_bytes": 28311552,
+  "resident_ratio": 14.124137931034483,
+  "compressed_peak_bytes": 832424960,
+  "compressed_base_bytes": 822818816,
+  "compressed_peak_above_base_bytes": 9606144,
+  "historical_kv_materialized": false,
+  "phase_seconds": {
+    "tokenizer_load": 0.1189775999810081,
+    "model_load": 0.6825417000218295,
+    "token_cache_load": 0.0031069999968167394,
+    "prefix_cache_load": 0.008959500002674758,
+    "prefix_forward": 0.23631179999210872,
+    "baseline_generation": 5.123040700011188,
+    "compressed_generation": 24.801706700003706
+  },
+  "relative_ppl_change": 0.061197043915265814
+}

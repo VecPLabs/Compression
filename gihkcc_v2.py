@@ -10,9 +10,11 @@ import torch
 from gihkcc import compute_statistical_snr
 from turboquant_paper import (
     PaperTurboQuantCompressed,
+    normal_lloyd_max,
     paper_turboquant_compress,
     paper_turboquant_decompress,
 )
+from turboquant import get_rotation_matrix
 
 
 @dataclass
@@ -150,6 +152,60 @@ def compress_predictive_stack(
             result.entries.append(PredictiveEntry(layer_idx, reference_layer, payload))
             reconstructed[layer_idx] = restored
 
+    return result
+
+
+def compress_adjacent_shared_rotation(
+    states: List[torch.Tensor], anchor_bits: int, delta_bits: int,
+    rotation_seed: int = 42,
+) -> PredictiveStack:
+    """Encode a closed-loop adjacent chain with one batched forward rotation."""
+    if not states:
+        return PredictiveStack()
+    shapes = {tuple(state.shape) for state in states}
+    devices = {state.device for state in states}
+    if len(shapes) != 1 or len(devices) != 1:
+        raise ValueError("shared-rotation encoding requires equal shapes and devices")
+    shape = tuple(states[0].shape)
+    dim = shape[-1]
+    vectors = torch.stack(
+        [state.float().reshape(-1, dim) for state in states]
+    )
+    rotation = get_rotation_matrix(
+        dim, seed=rotation_seed, device=str(states[0].device)
+    )
+    rotated_states = vectors @ rotation.T
+    result = PredictiveStack(num_layers=len(states))
+    reconstructed_rotated = None
+
+    for layer_idx, rotated in enumerate(rotated_states):
+        bits = anchor_bits if layer_idx == 0 else delta_bits
+        residual_rotated = (
+            rotated if layer_idx == 0 else rotated - reconstructed_rotated
+        )
+        norms = residual_rotated.norm(dim=-1, keepdim=True)
+        centroids = normal_lloyd_max(bits).to(rotated.device) / dim**0.5
+        boundaries = (centroids[:-1] + centroids[1:]) / 2
+        unit_rotated = residual_rotated / norms.clamp_min(1e-12)
+        indices = torch.bucketize(
+            unit_rotated.contiguous(), boundaries
+        ).to(torch.uint8)
+        quantized_rotated = centroids[indices.long()] * norms
+        reconstructed_rotated = (
+            quantized_rotated if layer_idx == 0
+            else reconstructed_rotated + quantized_rotated
+        )
+        payload = PaperTurboQuantCompressed(
+            indices=indices,
+            norms=norms.half(),
+            original_shape=shape,
+            original_dtype=states[layer_idx].dtype,
+            mse_bits=bits,
+            rotation_seed=rotation_seed,
+        )
+        result.entries.append(PredictiveEntry(
+            layer_idx, None if layer_idx == 0 else layer_idx - 1, payload
+        ))
     return result
 
 

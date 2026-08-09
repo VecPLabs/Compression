@@ -201,6 +201,114 @@ agreement, and 39.96 MB temporary peak above the model/packed baseline. The
 unfused Python path achieved 3.44 tokens/s versus 48.90 native, making kernel
 fusion—not compression quality or memory representation—the immediate blocker.
 
+The first Triton optimization fuses packed extraction, centroid lookup, and
+norm scaling. Adjacent-chain linearity then reduces up to 24 inverse rotations
+to one per decoded target layer. On the same 256-token trace, the combined path
+reached 6.56 tokens/s, reduced temporary peak from 39.96 MB to 7.19 MB, and
+measured +5.17% PPL with 89.45% top-1 agreement. Deepest-layer block-256
+attention is now 18.46 ms versus 16.24 ms materialized, with exact output parity
+and 2.49x lower temporary allocation. End-to-end generation remains 7.47x
+slower than native, so further projection/softmax fusion is still required.
+
+The second-stage kernel stores adjacent delta payloads as contiguous
+layer-major matrices and decodes the anchor plus every required delta in one
+runtime-depth Triton launch before the shared inverse rotation. A 24-layer CUDA
+parity test passes. On the same 32-prefix/256-token trace it reaches 10.28
+tokens/s, a 1.57x improvement over the one-rotation chain and a 2.99x
+improvement over the initial packed prototype. The remaining gap to the paired
+53.29-token/s native run is 5.18x. Temporary peak rises from 7.19 MB to 11.56
+MB because streaming concatenation reallocates the contiguous matrices;
+capacity-managed append buffers are therefore the next memory optimization.
+
+Exact-capacity append buffers remove per-token matrix reallocation. On the
+256-token trace they reduced temporary allocation above the resident base from
+11.56 MB to 9.61 MB and held physical resident storage equal to the 2.00 MB
+logical payload. Total peak allocation was effectively unchanged because the
+final packed history is required resident state, and throughput changed only
+from 10.28 to 10.32 tokens/s. This rules out append copying as the primary
+runtime bottleneck.
+
+Streaming adjacent compression now uses the shared rotation on the encoder
+side. All 24 layer states are forward-rotated in one batched matmul, then the
+closed-loop recurrence runs directly in rotated space because `(state -
+reconstructed) R^T = state R^T - reconstructed_rotated`. On 256 tokens this
+raises throughput from 10.32 to 11.57 tokens/s. Against the paired 51.64-token/s
+native run, the remaining gap is 4.46x. PPL change improves from +6.12% to
++4.00%, mean KL falls from 0.07266 to 0.06802, and top-1 agreement moves
+slightly from 87.89% to 87.50%.
+
+An optional `--fused-projection` experiment folds inverse rotation, LayerNorm
+affine parameters, and historical K/V projection into transformed weights. The
+identity is numerically validated, but the implementation is a negative result:
+it adds 101.15 MB of weights and reaches only 9.75 tokens/s on the 256-token
+trace versus 11.57 tokens/s for the unfused cuBLAS path. Its +4.84% PPL change
+is also worse than +4.00%. Small-matrix efficiency and normalization-correction
+overhead outweigh the reduced nominal FLOPs, so this path is not the default.
+
+For histories fitting one block, optional `--fused-attention` dispatches the
+projected historical K/V plus the current token to fused FP16 scaled-dot-product
+attention. The 256-token trace reaches 13.05 tokens/s, 12.8% faster than the
+11.57-token/s online-FP32 path and 3.79x faster than the initial packed
+prototype. This is a speed-oriented Pareto point rather than a replacement:
+PPL change is +4.77% and top-1 agreement is 86.72%, versus +4.00% and 87.50%
+for online FP32. Once history exceeds the block size, dispatch falls back to
+online blockwise softmax. FP32 SDPA was also tested and rejected at 8.90
+tokens/s on the full trace.
+
+A projected-K/V serving prototype now stores post-RoPE keys and values once,
+with an exact FP16 hot tail and packed symmetric cold stream. A no-eviction
+control matches native closely (+0.55% PPL, 100% top-1), validating cache order
+and attention semantics. Direct int8 stream tests also verify token order and
+reconstruction error. Uniform K/V quantization is not yet viable, however:
+hot-32/int8 cold measured +12.59% PPL over 16 tokens, while hot-32/4-bit cold
+was substantially worse despite reaching 19.93 tokens/s. This points to
+attention geometry rather than plumbing: the next iteration should use
+pagewise per-channel key quantization and per-token value quantization.
+
+That KIVI-style geometry succeeds. With 32-token pages and an FP16 hot-32
+tail, the full 256-token Pythia-410M trace establishes three projected-K/V
+points. K8/V4 reaches 21.05 tokens/s at 2.09x compression with -0.45% PPL,
+KL 0.00175, and 96.48% top-1. K6/V4 reaches 16.53 tokens/s at 2.36x with
++1.77% PPL, KL 0.00504, and 96.88% top-1. K4/V4 reaches 2.72x but increases
+PPL by 9.05%, so it is not the recommended point. Contiguous page storage more
+than doubled the K8/V4 reference decoder from 8.92 to 21.05 tokens/s. Its
+remaining 30.4 MB temporary peak comes from materializing decoded cold pages;
+a packed-page-to-attention kernel is the next direct optimization.
+
+The direct Triton path now performs packed key dot products, page-local
+softmax statistics, packed value accumulation, and pagewise online-softmax
+merging without materializing cold K/V. Parallel `(page, head)` programs raise
+K8/V4 hot-32 throughput to 24.61 tokens/s, reduce temporary peak from 30.4 MB
+to 18.4 MB, and preserve -0.69% PPL with 96.48% top-1 at 2.09x compression.
+K6/V4 hot-32 reaches 22.72 tokens/s, 2.36x compression, and +1.74% PPL. A
+fully compressed hot-0 K8/V4 cache reaches 2.42x compression and -0.05% PPL,
+but slows to 17.94 tokens/s because every token participates in cold packed
+attention. The fastest direct path is 7.15x faster than the initial packed
+residual prototype and remains 2.08x behind its paired native run.
+
+Long-context validation scores 1,024 held-out tokens after a 32-token prefix
+and repeats every configuration three times. K8/V4 hot-32 reaches median 27.29
+tokens/s (25.66--27.33), 2.32x compression, +0.043% PPL, and 97.07% top-1.
+K6/V4 hot-32 reaches median 26.12 tokens/s (23.72--26.35), 2.69x compression,
++1.29% PPL, and 95.51% top-1. Fully compressed K8/V4 hot-0 reaches median
+25.79 tokens/s (25.61--26.50), 2.42x compression, +0.50% PPL, and 96.97%
+top-1. All quality metrics are deterministic across repeats; median compressed
+throughput is within 1.95--1.98x of each paired native median.
+
+Quality was then evaluated across five non-overlapping 1,024-token windows at
+offsets 0, 1,056, 2,112, 3,168, and 4,224. K8/V4 hot-32 has median +0.115%
+PPL change (range -0.275% to +0.232%), median KL 0.00207, and median 97.66%
+top-1 agreement. K6/V4 hot-32 has median +0.813% PPL change (range +0.246% to
++1.293%), median KL 0.00642, and median 95.70% top-1. Median compressed
+throughput across the five independent windows is 25.77 and 25.52 tokens/s.
+This supersedes the original single-window quality claim.
+
+The generation validator supports reusable `--token-cache` and
+`--prefix-cache` artifacts plus an immediate `--phase-log`. A local
+`--dataset-arrow` path bypasses a Hugging Face offline-builder hang discovered
+during this work. With warm caches, the complete 256-step validation finishes
+in about 38 seconds instead of timing out after six minutes.
+
 A one-layer-at-a-time precision sweep is available through
 `sweep_layer_bits.py`. On the 128-token diagnostic, late layers appeared safe
 to downgrade, but the candidates did not generalize to 256 tokens: the best
