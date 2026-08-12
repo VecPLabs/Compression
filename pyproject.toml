@@ -22,6 +22,7 @@ hf = [
 ]
 dev = [
     "pytest>=8",
+    "transformers>=4.44",
 ]
 eval = [
     "datasets>=3",

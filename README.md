@@ -4,6 +4,11 @@
 
 Adaptation of Guardian-Informed Hierarchical KV Cache Compression for monolithic (non-Cerberus) transformer architectures. Implements Levels 1–3 of the recursive multi-scale fold-compress pipeline using statistical SNR as a proxy for Guardian-based keyframe placement.
 
+> **Latest result:** direct packed K/V attention on Pythia-1.4B reaches 2.32×
+> measured cache compression with +0.115% median perplexity change across five
+> held-out windows. Read the [technical report](TECHNICAL_REPORT.md) or the
+> shorter [website writeup](WEBSITE_WRITEUP.md).
+
 ## What This Does
 
 Compresses a transformer's KV cache by exploiting inter-layer, inter-keyframe, and inter-token redundancy — the same structural redundancy that H.264/H.265 exploits in video, applied to attention state.
@@ -40,9 +45,9 @@ test_cerberus.py             — Cerberus checkpoint experiment
 ```
 
 The files named `test_*.py` currently include both automated tests and research
-experiment harnesses. CI deliberately runs only the deterministic synthetic
-suites (`test_gihkcc.py` and `test_kvtc.py`); model and checkpoint experiments
-are opt-in because they require external artifacts.
+experiment harnesses. CI runs the deterministic suites selected in
+`pyproject.toml`; model and checkpoint experiments are opt-in because they
+require external artifacts.
 
 ## Quick Start
 
