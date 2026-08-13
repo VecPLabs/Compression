@@ -331,12 +331,24 @@ design space:
   short held-out passage, versus +2.18%, 0.304945, and 84.13% for message PCA.
   The negative PPL delta is treated as variation. This is evidence for learned
   MLP-message packing geometry, but not yet persistent-state compression.
+- **The full-depth control supports an activation-conditioned dictionary, with
+  qualifications.** At rank 64 across all 24 layers, the correctly associated
+  activation-weighted basis beat channel-shuffled activation weighting on live
+  intervention KL in 22/24 layers and beat message PCA in 11/24. In layers 4,
+  5, 6, 9, 11, and 12, PCA had lower message reconstruction MSE while active
+  `down_proj` had lower KL. This is the cleanest evidence that preserving high
+  variance is not identical to preserving computation. With 256 calibration
+  tokens, effective-rank estimates had median 28.32 and range 1.04–37.11,
+  revising the smaller-sample 8–20 estimate. An independent four-phase fit
+  placed boundaries at 0/4/12/16/24, but one model and one short holdout are
+  insufficient to claim that the geometry advantage tracks those boundaries.
 
 ## 8. Limitations
 
 This report does not yet establish broad model or serving generality.
 
-1. The primary results use one model, Pythia-410M.
+1. The primary cache results use Pythia-410M; the message-geometry diagnostic
+   uses one additional small model, Qwen2.5-0.5B.
 2. Evaluation is limited to WikiText-2 teacher-forced decoding; downstream task
    accuracy has not yet been measured for the projected-cache path.
 3. Batch size is one. Compression may create more value by enabling larger

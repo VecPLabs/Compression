@@ -49,7 +49,11 @@ def main() -> int:
     ids = tokenizer(text, return_tensors="pt", truncation=True,
                     max_length=args.tokens).input_ids.to(args.device)
     inputs, outputs, hooks = [], [], []
-    for layer in model.gpt_neox.layers:
+    layers = (
+        model.gpt_neox.layers if hasattr(model, "gpt_neox")
+        else model.model.layers
+    )
+    for layer in layers:
         hooks.append(layer.register_forward_pre_hook(
             lambda _module, call: inputs.append(call[0][0].detach().cpu())
         ))

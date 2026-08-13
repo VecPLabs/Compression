@@ -408,7 +408,9 @@ gate-activation-weighted `down_proj`, and prompt-fitted message PCA on unseen
 tokens. Activation weighting consistently improved the weight-only basis. At
 the final sampled layer it beat message PCA at ranks 8, 16, 32, and 128; for
 rank 16, next-reader MSE was 0.35694 versus 0.62653. Post-`down_proj` message
-effective rank was only 8–20 across sampled layers.
+effective rank was initially 8–20 across sampled layers, although a longer
+256-token calibration raises the all-layer median to 28.32 (range 1.04–37.11),
+so the exact rank estimate is calibration-sensitive.
 
 A direct intervention projected MLP writes at layers 5, 11, 17, and 23 into
 the learned subspaces. At rank 64 out of residual width 896, applying all four
@@ -417,6 +419,17 @@ with 0.26358 KL and 92.06% top-1 agreement. Prompt-fitted PCA measured +2.18%,
 0.30495 KL, and 84.13%. The negative PPL delta is sampling variation, not an
 improvement claim. This establishes a model-derived compact MLP-message
 subspace, not yet a persistent-cache compression result.
+
+An all-24-layer rank-64 scan adds the important control. The correctly paired
+activation-weighted basis beat a basis with activation statistics shuffled
+between channels on KL in 22/24 layers, supporting the claim that the *used*
+dictionary matters rather than weighting alone. It beat message PCA in 11/24
+layers. In six layers (4, 5, 6, 9, 11, 12), PCA reconstructed the MLP message
+more accurately while the active `down_proj` basis preserved behavior better,
+direct evidence that variance-optimal reconstruction and computation-optimal
+representation can diverge. Independently detected four-phase boundaries were
+0/4/12/16/24; the advantage is depth-dependent, but this single short run does
+not establish phase alignment.
 
 ### With a HuggingFace model
 

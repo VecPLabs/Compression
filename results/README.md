@@ -123,7 +123,9 @@ source objects and therefore loses compression. Artifacts are
 On Qwen2.5-0.5B, gated intermediate coefficient variance was used to weight
 the columns of each MLP `down_proj`, producing a residual-output covariance
 basis. Bases were calibrated separately from the 64-token holdout. Sampled
-post-`down_proj` messages had effective ranks from 8.31 to 19.97.
+post-`down_proj` messages had effective ranks from 8.31 to 19.97. A broader
+256-token, all-layer calibration produced a median of 28.32 and a range of
+1.04–37.11, showing that the exact estimate is sample-sensitive.
 
 At the final sampled layer, activation-weighted geometry beat message PCA at
 every evaluated rank (8, 16, 32, 128) on next-reader MSE. A direct intervention
@@ -142,6 +144,16 @@ at four layers produced:
 project transient MLP messages and do not establish cache compression. Raw
 artifacts use `qwen2.5_0.5b_downproj_geometry_*` and
 `qwen2.5_0.5b_downproj_intervention_*`.
+
+The all-layer rank-64 scan is
+`qwen2.5_0.5b_downproj_all_layers_r64_cal256_eval64.json`. Active `down_proj`
+beat activation weights shuffled across channels in 22/24 layers and message
+PCA in 11/24 by live-intervention KL. Layers 4, 5, 6, 9, 11, and 12 form a
+particularly informative inversion: PCA had lower reconstruction MSE, but the
+model-derived basis had lower downstream KL. The companion phase artifact,
+`qwen2.5_0.5b_detected_phases_n256.json`, reports boundaries 0/4/12/16/24;
+these are an exploratory overlay rather than evidence of causal phase
+alignment.
 
 ## Fixed configuration
 
