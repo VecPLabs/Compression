@@ -1,0 +1,152 @@
+{
+  "model": "C:\\Users\\David\\.cache\\huggingface\\hub\\models--Qwen--Qwen2.5-0.5B\\snapshots\\060db6499f32faf8b98477b0a26969ef7d8b9987",
+  "tokens": 128,
+  "calibration": 64,
+  "rank": 16,
+  "records": [
+    {
+      "layer": 5,
+      "basis": "identity",
+      "rank": 16,
+      "message_mse": 0.03531595319509506,
+      "normalized_mse": 2.1626269817352295,
+      "reader_mse": 1.2497175931930542,
+      "message_effective_rank": 10.833926213176577
+    },
+    {
+      "layer": 5,
+      "basis": "down_svd",
+      "rank": 16,
+      "message_mse": 0.031301774084568024,
+      "normalized_mse": 1.8337256908416748,
+      "reader_mse": 1.5412757396697998,
+      "message_effective_rank": 10.833926213176577
+    },
+    {
+      "layer": 5,
+      "basis": "act_down",
+      "rank": 16,
+      "message_mse": 0.027863532304763794,
+      "normalized_mse": 1.5214102268218994,
+      "reader_mse": 0.9780540466308594,
+      "message_effective_rank": 10.833926213176577
+    },
+    {
+      "layer": 5,
+      "basis": "message_pca",
+      "rank": 16,
+      "message_mse": 0.011700562201440334,
+      "normalized_mse": 0.48369312286376953,
+      "reader_mse": 0.39695727825164795,
+      "message_effective_rank": 10.833926213176577
+    },
+    {
+      "layer": 11,
+      "basis": "identity",
+      "rank": 16,
+      "message_mse": 0.05632546916604042,
+      "normalized_mse": 8.232029914855957,
+      "reader_mse": 3.1323275566101074,
+      "message_effective_rank": 15.623453311248538
+    },
+    {
+      "layer": 11,
+      "basis": "down_svd",
+      "rank": 16,
+      "message_mse": 0.05355850234627724,
+      "normalized_mse": 7.201066017150879,
+      "reader_mse": 3.4583401679992676,
+      "message_effective_rank": 15.623453311248538
+    },
+    {
+      "layer": 11,
+      "basis": "act_down",
+      "rank": 16,
+      "message_mse": 0.037515003234148026,
+      "normalized_mse": 4.7080206871032715,
+      "reader_mse": 1.7426505088806152,
+      "message_effective_rank": 15.623453311248538
+    },
+    {
+      "layer": 11,
+      "basis": "message_pca",
+      "rank": 16,
+      "message_mse": 0.011561074294149876,
+      "normalized_mse": 1.0496681928634644,
+      "reader_mse": 0.44129812717437744,
+      "message_effective_rank": 15.623453311248538
+    },
+    {
+      "layer": 17,
+      "basis": "identity",
+      "rank": 16,
+      "message_mse": 0.090873584151268,
+      "normalized_mse": 5.570385456085205,
+      "reader_mse": 2.4148130416870117,
+      "message_effective_rank": 19.968040712868355
+    },
+    {
+      "layer": 17,
+      "basis": "down_svd",
+      "rank": 16,
+      "message_mse": 0.07035841047763824,
+      "normalized_mse": 2.7670059204101562,
+      "reader_mse": 1.5856412649154663,
+      "message_effective_rank": 19.968040712868355
+    },
+    {
+      "layer": 17,
+      "basis": "act_down",
+      "rank": 16,
+      "message_mse": 0.04076900705695152,
+      "normalized_mse": 1.3092539310455322,
+      "reader_mse": 0.6690981388092041,
+      "message_effective_rank": 19.968040712868355
+    },
+    {
+      "layer": 17,
+      "basis": "message_pca",
+      "rank": 16,
+      "message_mse": 0.022233949974179268,
+      "normalized_mse": 0.7129998803138733,
+      "reader_mse": 0.35834208130836487,
+      "message_effective_rank": 19.968040712868355
+    },
+    {
+      "layer": 23,
+      "basis": "identity",
+      "rank": 16,
+      "message_mse": 6.334432125091553,
+      "normalized_mse": 6.734803676605225,
+      "reader_mse": 1.9752881526947021,
+      "message_effective_rank": 8.314679994343017
+    },
+    {
+      "layer": 23,
+      "basis": "down_svd",
+      "rank": 16,
+      "message_mse": 1.0932849645614624,
+      "normalized_mse": 1.732090950012207,
+      "reader_mse": 0.641946017742157,
+      "message_effective_rank": 8.314679994343017
+    },
+    {
+      "layer": 23,
+      "basis": "act_down",
+      "rank": 16,
+      "message_mse": 0.6680811643600464,
+      "normalized_mse": 0.7882302403450012,
+      "reader_mse": 0.35693681240081787,
+      "message_effective_rank": 8.314679994343017
+    },
+    {
+      "layer": 23,
+      "basis": "message_pca",
+      "rank": 16,
+      "message_mse": 1.2150094509124756,
+      "normalized_mse": 1.6902921199798584,
+      "reader_mse": 0.6265338659286499,
+      "message_effective_rank": 8.314679994343017
+    }
+  ]
+}

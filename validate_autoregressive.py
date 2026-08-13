@@ -25,6 +25,10 @@ from gihkcc_v2 import (
     compress_predictive_stack,
     decompress_predictive_stack,
 )
+from residual_repacking import (
+    compress_adjacent_repacked, compress_blockwise_repacked,
+    compress_message_block,
+)
 from turboquant_paper import paper_turboquant_compress, paper_turboquant_decompress
 
 
@@ -77,6 +81,43 @@ def capture_layer_inputs(
     finally:
         for hook in hooks:
             hook.remove()
+
+
+@contextmanager
+def capture_neox_communication(model, storage_device="cpu"):
+    """Capture the layer-0 anchor and each attention/MLP residual write."""
+    inputs, attention, mlp, hooks = [], [], [], []
+    for layer in decoder_layers(model):
+        hooks.append(layer.register_forward_pre_hook(
+            lambda _module, args: inputs.append(
+                args[0][0].detach().to(storage_device)
+            )
+        ))
+        hooks.append(layer.post_attention_dropout.register_forward_hook(
+            lambda _module, _args, output: attention.append(
+                output[0].detach().to(storage_device)
+            )
+        ))
+        hooks.append(layer.post_mlp_dropout.register_forward_hook(
+            lambda _module, _args, output: mlp.append(
+                output[0].detach().to(storage_device)
+            )
+        ))
+    try:
+        yield inputs, attention, mlp
+    finally:
+        for hook in hooks:
+            hook.remove()
+
+
+def interleave_messages(attention, mlp, combined: bool = False):
+    messages = []
+    for attention_write, mlp_write in zip(attention, mlp):
+        if combined:
+            messages.append(attention_write + mlp_write)
+        else:
+            messages.extend([attention_write, mlp_write])
+    return messages
 
 
 def build_neox_cache(
@@ -132,8 +173,30 @@ def append_neox_cache(
 def compress_residual_history(
     residuals, delta_bits, capture_point: str = "residual", model=None,
     ln_aware_candidates: int = 1, ln_aware_seeds=None,
-    prediction_mode: str = "anchor",
+    prediction_mode: str = "anchor", repacking: str | None = None,
+    repacking_bases=None, repacking_block_size: int | None = None,
+    repacking_protected_fraction: float | None = None,
+    repacking_boundaries: list[int] | None = None,
 ):
+    if repacking:
+        if capture_point != "residual" or not isinstance(delta_bits, int):
+            raise ValueError("repacking requires residual capture and uniform bits")
+        grams = []
+        for layer in decoder_layers(model):
+            weight = layer.attention.query_key_value.weight.detach().float().cpu()
+            grams.append(weight.T @ weight)
+        if repacking_block_size or repacking_boundaries:
+            return compress_blockwise_repacked(
+                residuals, delta_bits, grams,
+                repacking_block_size or len(residuals),
+                repacking, repacking_bases,
+                protected_fraction=repacking_protected_fraction,
+                boundaries=repacking_boundaries,
+            )
+        return compress_adjacent_repacked(
+            residuals, delta_bits, grams, repacking, repacking_bases,
+            protected_fraction=repacking_protected_fraction,
+        )
     if ln_aware_candidates > 1 or ln_aware_seeds is not None:
         if capture_point != "residual" or not isinstance(delta_bits, int):
             raise ValueError("LayerNorm-aware search requires uniform residual bits")
@@ -243,7 +306,10 @@ def evaluate(
     model, tokens: torch.Tensor, prefix: int, steps: int, delta_bits,
     capture_point: str = "residual", ln_aware_candidates: int = 1,
     prediction_mode: str = "anchor",
-    incremental: bool = False,
+    incremental: bool = False, repacking: str | None = None,
+    repacking_block_size: int | None = None,
+    repacking_protected_fraction: float | None = None,
+    repacking_boundaries: list[int] | None = None,
 ):
     prefix_ids = tokens[:, :prefix]
     with capture_layer_inputs(model, capture_point) as captured:
@@ -254,8 +320,12 @@ def evaluate(
 
     compressed_stack, decoded = compress_residual_history(
         residual_history, delta_bits, capture_point, model, ln_aware_candidates,
-        prediction_mode=prediction_mode,
+        prediction_mode=prediction_mode, repacking=repacking,
+        repacking_block_size=repacking_block_size,
+        repacking_protected_fraction=repacking_protected_fraction,
+        repacking_boundaries=repacking_boundaries,
     )
+    locked_repacking_bases = getattr(compressed_stack, "bases", None)
     locked_ln_seeds = None
     if ln_aware_candidates > 1:
         locked_ln_seeds = [
@@ -299,6 +369,9 @@ def evaluate(
             _, decoded_current = compress_residual_history(
                 current_residuals, delta_bits, capture_point, model,
                 ln_aware_candidates, locked_ln_seeds, prediction_mode,
+                repacking, locked_repacking_bases, repacking_block_size,
+                repacking_protected_fraction,
+                repacking_boundaries,
             )
             # The model appended an uncompressed current-token entry in place.
             # Remove it and replace it with K/V projected from the decoded state.
@@ -311,6 +384,9 @@ def evaluate(
             compressed_stack, decoded = compress_residual_history(
                 residual_history, delta_bits, capture_point, model,
                 ln_aware_candidates, locked_ln_seeds, prediction_mode,
+                repacking, locked_repacking_bases, repacking_block_size,
+                repacking_protected_fraction,
+                repacking_boundaries,
             )
             compressed_cache = build_neox_cache(model, decoded, capture_point)
 
@@ -318,7 +394,89 @@ def evaluate(
         compressed_stack, _ = compress_residual_history(
             residual_history, delta_bits, capture_point, model,
             ln_aware_candidates, locked_ln_seeds, prediction_mode,
+            repacking, locked_repacking_bases, repacking_block_size,
+            repacking_protected_fraction,
+            repacking_boundaries,
         )
+    ratio = native_kv_bytes(model, prefix + available) / compressed_stack.compressed_bytes
+    return {
+        "tokens": available,
+        "baseline_ppl": math.exp(baseline_nll / available),
+        "compressed_ppl": math.exp(compressed_nll / available),
+        "mean_kl": kl_total / available,
+        "top1_agreement": top_matches / available,
+        "persistent_ratio": ratio,
+    }
+
+
+def evaluate_message_repacking(
+    model, tokens: torch.Tensor, prefix: int, steps: int,
+    bits: int, method: str,
+):
+    """Validate joint attention/MLP-message coding in incremental inference."""
+    prefix_ids = tokens[:, :prefix]
+    with capture_neox_communication(model) as (inputs, attention, mlp):
+        with torch.no_grad():
+            baseline_output = model(prefix_ids, use_cache=True)
+    baseline_cache = baseline_output.past_key_values
+    anchor_history = inputs[0].clone()
+    combined = method.endswith("_combined")
+    fit_method = method.removesuffix("_combined")
+    writes_per_layer = 1 if combined else 2
+    message_history = [item.clone() for item in interleave_messages(
+        attention, mlp, combined
+    )]
+    compressed_stack, decoded = compress_message_block(
+        anchor_history, message_history, bits, fit_method,
+        writes_per_layer=writes_per_layer,
+    )
+    basis = compressed_stack.basis
+    compressed_cache = build_neox_cache(model, decoded)
+    baseline_nll = compressed_nll = kl_total = 0.0
+    top_matches = 0
+    available = min(steps, tokens.shape[1] - prefix - 1)
+    for offset in range(available):
+        position = prefix + offset
+        input_id = tokens[:, position:position + 1]
+        target = tokens[:, position + 1]
+        with torch.no_grad():
+            baseline = model(input_id, past_key_values=baseline_cache, use_cache=True)
+        baseline_cache = baseline.past_key_values
+        with capture_neox_communication(model) as (inputs, attention, mlp):
+            with torch.no_grad():
+                compressed = model(
+                    input_id, past_key_values=compressed_cache, use_cache=True
+                )
+        baseline_logits = baseline.logits[:, -1].float()
+        compressed_logits = compressed.logits[:, -1].float()
+        baseline_nll += F.cross_entropy(baseline_logits, target, reduction="sum").item()
+        compressed_nll += F.cross_entropy(compressed_logits, target, reduction="sum").item()
+        top_matches += int(
+            baseline_logits.argmax(-1).item() == compressed_logits.argmax(-1).item()
+        )
+        baseline_log_probs = F.log_softmax(baseline_logits, dim=-1)
+        compressed_log_probs = F.log_softmax(compressed_logits, dim=-1)
+        kl_total += F.kl_div(
+            compressed_log_probs, baseline_log_probs.exp(), reduction="batchmean"
+        ).item()
+        current_messages = interleave_messages(attention, mlp, combined)
+        _, decoded_current = compress_message_block(
+            inputs[0], current_messages, bits, fit_method, basis,
+            writes_per_layer,
+        )
+        compressed_cache.crop(position)
+        append_neox_cache(
+            model, compressed_cache, decoded_current, start_position=position
+        )
+        anchor_history = torch.cat([anchor_history, inputs[0]], dim=0)
+        for index, message in enumerate(current_messages):
+            message_history[index] = torch.cat(
+                [message_history[index], message], dim=0
+            )
+    compressed_stack, _ = compress_message_block(
+        anchor_history, message_history, bits, fit_method, basis,
+        writes_per_layer,
+    )
     ratio = native_kv_bytes(model, prefix + available) / compressed_stack.compressed_bytes
     return {
         "tokens": available,
@@ -369,6 +527,31 @@ def main() -> int:
         "--incremental", action="store_true",
         help="Compress and replace only each new token instead of rebuilding history",
     )
+    parser.add_argument(
+        "--repacking", choices=(
+            "identity", "random", "pca", "reader", "reader_closedloop",
+        ),
+        help="Repack adjacent deltas before mixed-bit quantization",
+    )
+    parser.add_argument(
+        "--repacking-block-size", type=int,
+        help="Share one basis within N-layer depth blocks and anchor each block",
+    )
+    parser.add_argument(
+        "--repacking-protected-fraction", type=float,
+        help="Fraction of most important basis directions stored at 8 bits",
+    )
+    parser.add_argument(
+        "--repacking-boundaries",
+        help="Comma-separated layer starts for phase-aligned repacking",
+    )
+    parser.add_argument(
+        "--message-repacking", choices=(
+            "identity", "pca", "prefix", "identity_combined",
+            "pca_combined", "prefix_combined",
+        ),
+        help="Jointly compress attention/MLP writes across message depth",
+    )
     args = parser.parse_args()
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -408,10 +591,25 @@ def main() -> int:
     )
     if isinstance(allocation, list) and len(allocation) != len(decoder_layers(model)):
         raise ValueError("--layer-bits must contain one value per model layer")
-    result = evaluate(
-        model, tokens, args.prefix, args.steps, allocation, args.capture_point,
-        args.ln_aware_candidates, args.prediction, args.incremental,
+    repacking_boundaries = (
+        [int(value) for value in args.repacking_boundaries.split(",")]
+        if args.repacking_boundaries else None
     )
+    if args.message_repacking:
+        if not isinstance(allocation, int):
+            raise ValueError("message repacking requires uniform --bits")
+        result = evaluate_message_repacking(
+            model, tokens, args.prefix, args.steps, allocation,
+            args.message_repacking,
+        )
+    else:
+        result = evaluate(
+            model, tokens, args.prefix, args.steps, allocation, args.capture_point,
+            args.ln_aware_candidates, args.prediction, args.incremental,
+            args.repacking, args.repacking_block_size,
+            args.repacking_protected_fraction,
+            repacking_boundaries,
+        )
     relative = result["compressed_ppl"] / result["baseline_ppl"] - 1
     print(f"\nTeacher-forced autoregressive validation ({result['tokens']} tokens)")
     print(f"  capture point:           {args.capture_point}")
@@ -419,6 +617,11 @@ def main() -> int:
     print(f"  LN-aware candidates:     {args.ln_aware_candidates}")
     print(f"  prediction:              {args.prediction}")
     print(f"  incremental:             {args.incremental}")
+    print(f"  repacking:               {args.repacking or 'none'}")
+    print(f"  repacking block size:    {args.repacking_block_size or 'none'}")
+    print(f"  protected fraction:      {args.repacking_protected_fraction if args.repacking_protected_fraction is not None else 'none'}")
+    print(f"  repacking boundaries:    {repacking_boundaries or 'none'}")
+    print(f"  message repacking:       {args.message_repacking or 'none'}")
     print(f"  FP16-cache baseline PPL: {result['baseline_ppl']:.4f}")
     label = args.layer_bits or f"{args.bits}-bit"
     print(f"  GIHKCC {label} PPL:    {result['compressed_ppl']:.4f}")
@@ -441,6 +644,11 @@ def main() -> int:
             "prediction": args.prediction,
             "capture_point": args.capture_point,
             "incremental": args.incremental,
+            "repacking": args.repacking,
+            "repacking_block_size": args.repacking_block_size,
+            "repacking_protected_fraction": args.repacking_protected_fraction,
+            "repacking_boundaries": repacking_boundaries,
+            "message_repacking": args.message_repacking,
             "device": device,
             "torch_version": torch.__version__,
             "cuda_version": torch.version.cuda,

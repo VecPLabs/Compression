@@ -1,0 +1,37 @@
+{
+  "timestamp_utc": "2026-08-12T04:28:13.358897+00:00",
+  "model": "EleutherAI/pythia-410m",
+  "model_revision": null,
+  "dataset": "Salesforce/wikitext",
+  "dataset_config": "wikitext-2-raw-v1",
+  "split": "validation",
+  "token_offset": 0,
+  "prefix": 32,
+  "steps": 64,
+  "bits": 2,
+  "prediction": "adjacent",
+  "capture_point": "residual",
+  "incremental": true,
+  "repacking": "reader",
+  "repacking_block_size": null,
+  "repacking_protected_fraction": null,
+  "repacking_boundaries": [
+    0,
+    6,
+    12,
+    18
+  ],
+  "message_repacking": null,
+  "device": "cpu",
+  "torch_version": "2.13.0+cpu",
+  "cuda_version": null,
+  "result": {
+    "tokens": 64,
+    "baseline_ppl": 38.467975378948104,
+    "compressed_ppl": 91.87037875392497,
+    "mean_kl": 0.7940536765090656,
+    "top1_agreement": 0.5625,
+    "persistent_ratio": 10.605102756351476
+  },
+  "relative_ppl_change": 1.3882301537554205
+}

@@ -1,0 +1,83 @@
+{
+  "model": "C:\\Users\\David\\.cache\\huggingface\\hub\\models--Qwen--Qwen2.5-0.5B\\snapshots\\060db6499f32faf8b98477b0a26969ef7d8b9987",
+  "rank": 64,
+  "layers": [
+    5,
+    11,
+    17,
+    23
+  ],
+  "baseline_ppl": 5.205802950240405,
+  "records": [
+    {
+      "basis": "act_down",
+      "scope": "layer-5",
+      "ppl_change": -0.058598526534763606,
+      "mean_kl": 0.0516170168679858,
+      "top1_agreement": 0.9523809552192688
+    },
+    {
+      "basis": "act_down",
+      "scope": "layer-11",
+      "ppl_change": -0.021231310999945685,
+      "mean_kl": 0.01648605815948002,
+      "top1_agreement": 0.9841269850730896
+    },
+    {
+      "basis": "act_down",
+      "scope": "layer-17",
+      "ppl_change": -0.05095156752061747,
+      "mean_kl": 0.02150161304171123,
+      "top1_agreement": 0.9523809552192688
+    },
+    {
+      "basis": "act_down",
+      "scope": "layer-23",
+      "ppl_change": 0.17758599108177298,
+      "mean_kl": 0.1576787100897895,
+      "top1_agreement": 0.9523809552192688
+    },
+    {
+      "basis": "act_down",
+      "scope": "all",
+      "ppl_change": -0.0057359306394966225,
+      "mean_kl": 0.2635760534377325,
+      "top1_agreement": 0.920634925365448
+    },
+    {
+      "basis": "message_pca",
+      "scope": "layer-5",
+      "ppl_change": -0.01757597120628196,
+      "mean_kl": 0.06865605096968394,
+      "top1_agreement": 0.920634925365448
+    },
+    {
+      "basis": "message_pca",
+      "scope": "layer-11",
+      "ppl_change": -0.008999023848441534,
+      "mean_kl": 0.021925332054259287,
+      "top1_agreement": 0.9841269850730896
+    },
+    {
+      "basis": "message_pca",
+      "scope": "layer-17",
+      "ppl_change": -0.06763468296562714,
+      "mean_kl": 0.018683579232957628,
+      "top1_agreement": 0.9523809552192688
+    },
+    {
+      "basis": "message_pca",
+      "scope": "layer-23",
+      "ppl_change": 0.12207407281275584,
+      "mean_kl": 0.18948102375817677,
+      "top1_agreement": 0.8888888955116272
+    },
+    {
+      "basis": "message_pca",
+      "scope": "all",
+      "ppl_change": 0.02178491331438237,
+      "mean_kl": 0.3049445076594277,
+      "top1_agreement": 0.841269850730896
+    }
+  ]
+}

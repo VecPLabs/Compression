@@ -4,6 +4,145 @@ This directory contains machine-readable benchmark artifacts. Treat JSON files
 as the source of truth; each records the model revision, dataset fingerprint,
 sample seed and offset, codec configuration, device, and software versions.
 
+## Static residual repacking (negative result)
+
+We tested whether an orthogonal change of basis could concentrate adjacent
+residual deltas before a fixed two-bit-average mixed-precision code. Bases were
+calibrated separately from evaluation tokens and reused during incremental
+closed-loop generation. The stored basis is treated as model-side codec state,
+as TurboQuant treats its fixed rotation, and is not counted as cache payload.
+
+On an open-loop 256-token diagnostic, learned bases reduced raw residual MSE,
+but that metric did not predict live-cache behavior. The paired 64-token
+Pythia-70M generation run produced:
+
+| Basis | Cache ratio | PPL change | Mean KL | Top-1 agreement |
+|---|---:|---:|---:|---:|
+| Identity allocation | 10.56x | +523.80% | 1.714002 | 39.06% |
+| Reader-aware | 10.56x | +89.81% | 0.532261 | 54.69% |
+| Delta PCA | 10.56x | +92.16% | 0.600651 | 59.38% |
+| Reader-aware, closed-loop fit | 10.56x | +145.67% | 0.795298 | 48.44% |
+
+Artifacts: `pythia70m_repacking_identity_n64_2bit.json`,
+`pythia70m_repacking_reader_n64_2bit.json`, and
+`pythia70m_repacking_pca_n64_2bit.json`, plus the closed-loop control
+`pythia70m_repacking_reader_closedloop_n64_2bit.json`. These are short diagnostic runs, not
+publication-quality estimates. Their purpose is to reject static raw-delta
+bases before spending compute on larger models.
+
+### Depth-block controls
+
+One basis was then shared across consecutive layer blocks, with an 8-bit
+anchor at every boundary. All rows use the corrected norm-scaled Lloyd–Max
+codec and include boundary-anchor overhead.
+
+| Basis/block | Bits | Cache ratio | PPL change | Mean KL | Top-1 |
+|---|---:|---:|---:|---:|---:|
+| Reader, 2 layers | 2 | 6.36x | +52.84% | 0.412203 | 60.94% |
+| Reader, 3 layers | 2 | 7.94x | +66.48% | 0.343334 | 59.38% |
+| Reader, 6 layers | 2 | 10.56x | +44.47% | 0.444301 | 67.19% |
+| Reader, 6 layers | 3 | 8.28x | +23.05% | 0.388733 | 57.81% |
+| Reader, 6 layers | 4 | 6.81x | +27.65% | 0.275566 | 70.31% |
+| PCA, 6 layers | 2 | 10.56x | +147.43% | 1.017875 | 37.50% |
+
+The six-layer reader basis halves the relative PPL damage of its per-layer
+counterpart at identical storage. This supports a block-stationarity effect,
+but none of the tested points is competitive with the established direct-K/V
+cache frontier.
+
+### KL-selected protected band
+
+At the same two-bit-average budget, candidate protected fractions of 0%, 5%,
+10%, 15%, and 20% were swept on a 32-token calibration trace. Protected
+directions use 8 bits, the ordinary band uses 3 bits, and the remaining
+directions are dropped. The 10% candidate had the lowest calibration KL
+(0.231860) and was frozen before evaluation on the non-overlapping token-offset
+96 window.
+
+| Holdout allocation | Cache ratio | PPL change | Mean KL | Top-1 |
+|---|---:|---:|---:|---:|
+| Two-band block baseline | 10.56x | +55.63% | 0.700297 | 62.50% |
+| Three-band, 10% protected | 10.47x | +41.87% | 0.332601 | 59.38% |
+
+The protected band generalizes in PPL and KL, but not top-1 agreement, and the
+absolute regression remains too large. See the `threeband_cal_*` artifacts and
+`pythia70m_repacking_threeband_f010_holdout_n64_2bit.json`.
+
+### Attention/MLP message-axis coding
+
+Pythia's parallel residual layers export `x + attention(x) + MLP(x)`. We
+captured the two internal writes and transformed along the 12-message depth
+axis before rebuilding the live K/V cache.
+
+| Message representation/basis | Cache ratio | PPL change | Mean KL | Top-1 |
+|---|---:|---:|---:|---:|
+| Separate writes, identity | 4.00x | +225.36% | 1.026909 | 46.88% |
+| Separate writes, PCA | 4.00x | +197.09% | 0.883755 | 42.19% |
+| Separate writes, prefix-aware | 4.00x | +52.29% | 0.399160 | 65.62% |
+| Combined layer update, identity | 5.33x | +552.97% | 1.875011 | 23.44% |
+| Combined layer update, PCA | 5.33x | +320.11% | 1.783722 | 37.50% |
+| Combined layer update, prefix-aware | 5.33x | +788.97% | 1.848445 | 29.69% |
+
+Prefix-sum weighting validates the communication-channel framing for separate
+writes, but the representation doubles the objects being stored. Combining
+the writes before scalar coding loses cancellation structure and is rejected.
+The source artifacts use the `pythia70m_message_repacking_*` prefix.
+
+### Detected functional phases on Pythia-410M
+
+Linear CKA between adjacent layer updates plus update-norm shifts selected
+four phases at `0–5–9–20–24` under a four-layer minimum. The strongest changes
+occurred near layers 5 and 20–22, with another clear break at 9. Equal-anchor
+closed-loop controls produced:
+
+| Boundaries | Cache ratio | PPL change | Mean KL | Top-1 |
+|---|---:|---:|---:|---:|
+| Uniform `0,6,12,18,24` | 10.61x | +138.82% | 0.794054 | 56.25% |
+| Detected `0,5,9,20,24` | 10.61x | +660.65% | 1.455376 | 35.94% |
+| Detected plus six-layer cap `0,5,9,15,20,24` | 9.79x | +538.36% | 1.406635 | 40.62% |
+
+The phase changes are measurable but do not define useful codec resets. The
+detector artifact is `pythia410m_detected_phases_n128.json`; generation
+artifacts use `pythia410m_repacking_*phase*` and `*capped6*`.
+
+### Whole-stream closing controls
+
+| Whole-depth representation | Cache ratio | PPL change | Mean KL | Top-1 |
+|---|---:|---:|---:|---:|
+| One reader basis over 24 residual layers | 14.11x | +199.48% | 1.292619 | 51.56% |
+| One prefix-aware basis over 48 internal writes | 6.40x | +153.44% | 0.751582 | 54.69% |
+
+The 24-layer block validates the expected size effect in storage accounting,
+but not in quality. The 48-write representation has lower KL but doubles the
+source objects and therefore loses compression. Artifacts are
+`pythia410m_repacking_whole24_reader_n64_2bit.json` and
+`pythia410m_message_repacking_whole48_prefix_n64_2bit.json`.
+
+### Qwen2.5 activation-weighted `down_proj` geometry
+
+On Qwen2.5-0.5B, gated intermediate coefficient variance was used to weight
+the columns of each MLP `down_proj`, producing a residual-output covariance
+basis. Bases were calibrated separately from the 64-token holdout. Sampled
+post-`down_proj` messages had effective ranks from 8.31 to 19.97.
+
+At the final sampled layer, activation-weighted geometry beat message PCA at
+every evaluated rank (8, 16, 32, 128) on next-reader MSE. A direct intervention
+at four layers produced:
+
+| Rank/basis, all sampled layers | PPL change | Mean KL | Top-1 |
+|---|---:|---:|---:|
+| 16 activation-weighted | +12.85% | 0.559252 | 88.89% |
+| 16 message PCA | +45.38% | 0.754446 | 79.37% |
+| 32 activation-weighted | +12.73% | 0.542594 | 88.89% |
+| 32 message PCA | +19.06% | 0.504988 | 84.13% |
+| 64 activation-weighted | -0.57%* | 0.263576 | 92.06% |
+| 64 message PCA | +2.18% | 0.304945 | 84.13% |
+
+\*Short-passage variation, not evidence of improved modeling. These experiments
+project transient MLP messages and do not establish cache compression. Raw
+artifacts use `qwen2.5_0.5b_downproj_geometry_*` and
+`qwen2.5_0.5b_downproj_intervention_*`.
+
 ## Fixed configuration
 
 - Model: `EleutherAI/pythia-410m`

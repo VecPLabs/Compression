@@ -340,6 +340,84 @@ the same 10.54x ratio. Local normalized-state MSE is therefore not a useful
 selection objective; future optimization should score projected Q/K/V error
 or teacher-logit KL directly.
 
+Static residual repacking is available as a reproducible negative experiment
+through `benchmark_residual_repacking.py` and `validate_autoregressive.py
+--repacking`. On held-out Pythia-70M activations, a projection-aware basis cut
+open-loop projected-QKV delta MSE substantially, but the improvement did not
+survive closed-loop generation. At a 10.56x persistent-cache ratio over 64
+tokens, identity, reader-aware, and PCA repacking increased perplexity by
+523.80%, 89.81%, and 92.16%, respectively, with the corrected Lloyd–Max
+codec. The decoder-visible delta
+distribution shifts after every quantized layer, so a basis fitted to raw
+adjacent deltas is not a stable importance map. Three rounds of closed-loop
+reader-aware refitting also failed at +145.67%, rejecting a frozen per-layer
+basis even when calibrated on decoder-visible predecessors.
+
+Depth-block repacking is more promising but not yet viable. Sharing one
+reader-aware basis across all six Pythia-70M layers reduced the two-bit PPL
+regression from +89.81% to +44.47% at the same 10.56x cache ratio. Two- and
+three-layer blocks measured +52.84% at 6.36x and +66.48% at 7.94x because
+their extra 8-bit boundary anchors consume more storage. At three bits the
+six-layer block reached 8.28x/+23.05%; four bits was non-monotonic at
+6.81x/+27.65%. The block scope clearly helps, but the current importance map
+and scalar codebook still do not preserve generation quality.
+
+A three-band block allocation protects the highest-ranked 10% of shared-basis
+directions at 8 bits, quantizes an ordinary band at 3 bits, and drops the
+remainder while holding the average near 2 bits. The 10% fraction was selected
+by closed-loop KL on a 32-token calibration trace, then evaluated on a separate
+64-token window. It reduced holdout PPL damage from +55.63% to +41.87% and KL
+from 0.70030 to 0.33260 at essentially unchanged compression (10.56x versus
+10.47x). Top-1 agreement fell from 62.50% to 59.38%, so this is a directional
+improvement rather than a usable operating point.
+
+Message-axis repacking tests the residual stream explicitly as a communication
+channel. Hooks capture the attention and MLP writes produced inside each layer,
+then a transform operates across message depth. At two average bits, generic
+message coordinates increased PPL by +225.36%, PCA by +197.09%, and a
+prefix-sum-aware basis by +52.29%. The latter is a large functional improvement
+but reaches only 4.00x cache compression because it stores two writes per
+layer. Combining attention and MLP into the single update actually passed to
+the next layer reduced storage but destroyed quality: identity, PCA, and
+prefix-aware combined coding changed PPL by +552.97%, +320.11%, and +788.97%
+at 5.33x. Internal writes contain cancellation structure that the current
+scalar codec loses when they are summed first.
+
+On the deeper 24-layer Pythia-410M model, adjacent update CKA and norm shifts
+detected candidate phase boundaries at layers `0,5,9,20,24`: short early and
+transition regions, a long middle region, and a short terminal region. These
+boundaries resemble an identify/plan/produce/polish staging, but they are poor
+codec boundaries. At identical four-anchor overhead and 10.61x compression,
+detected phases increased PPL by +660.65% versus +138.82% for uniform
+six-layer blocks (`0,6,12,18,24`). Capping the detected layout to six-layer
+chains still measured +538.36% at 9.79x. Mechanistic discontinuities identify
+changes in computation, not necessarily stable rate-distortion regions.
+
+The final whole-stream controls close this branch. One reader-aware basis over
+all 24 Pythia-410M layers recovered 14.11x compression, confirming that larger
+objects amortize anchors and metadata, but increased PPL by +199.48%. One
+prefix-aware transform over all 48 attention/MLP writes measured 6.40x and
++153.44% PPL. Neither improves on four uniform six-layer blocks in quality,
+and both remain far behind direct packed projected-K/V compression. Residual
+repacking is therefore retained as a mechanistic negative result rather than a
+serving candidate under the current scalar codec.
+
+Qwen2.5 `down_proj` geometry provides a more positive result. On the cached
+0.5B model, we compared arbitrary residual coordinates, raw `down_proj` SVD,
+gate-activation-weighted `down_proj`, and prompt-fitted message PCA on unseen
+tokens. Activation weighting consistently improved the weight-only basis. At
+the final sampled layer it beat message PCA at ranks 8, 16, 32, and 128; for
+rank 16, next-reader MSE was 0.35694 versus 0.62653. Post-`down_proj` message
+effective rank was only 8–20 across sampled layers.
+
+A direct intervention projected MLP writes at layers 5, 11, 17, and 23 into
+the learned subspaces. At rank 64 out of residual width 896, applying all four
+activation-weighted bases changed PPL by -0.57% on the short held-out passage,
+with 0.26358 KL and 92.06% top-1 agreement. Prompt-fitted PCA measured +2.18%,
+0.30495 KL, and 84.13%. The negative PPL delta is sampling variation, not an
+improvement claim. This establishes a model-derived compact MLP-message
+subspace, not yet a persistent-cache compression result.
+
 ### With a HuggingFace model
 
 Install the optional integration dependencies first:

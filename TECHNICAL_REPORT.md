@@ -285,6 +285,52 @@ design space:
 - **Short page tests can be misleading.** A 32-step evaluation with a hot-32
   tail completed its first cold page only after the final scored token. The
   protocol was corrected to ensure quantized pages were consumed.
+- **Static residual repacking did not survive closed loop.** PCA and a
+  projection-aware orthogonal basis reduced open-loop residual diagnostics,
+  but at 10.56x cache compression their 64-token Pythia-70M perplexity changes
+  were +92.16% and +89.81%, versus +523.80% for the identity allocation under
+  the corrected norm-scaled Lloyd–Max codec. A
+  basis fitted to raw adjacent deltas does not remain aligned with the
+  decoder-visible error distribution after quantized predictions feed forward.
+  Three rounds of reader-aware refitting on the reconstructed trajectory were
+  also rejected at +145.67% perplexity change. Sharing one reader-aware basis
+  across all six layers improved the two-bit result to +44.47% at the same
+  10.56x ratio, supporting block stationarity, but still failed the quality bar.
+  A three-band allocation selected 10% protected directions by calibration
+  logit KL. On a separate window it reduced PPL damage from +55.63% to +41.87%
+  and KL from 0.700297 to 0.332601 at 10.47x rather than 10.56x, while top-1
+  agreement declined from 62.50% to 59.38%. Protecting a compact core helps,
+  but the remaining absolute error rejects the current codec.
+- **Message-axis coding supports the communication view but not the storage
+  frontier.** Capturing attention and MLP writes separately and weighting a
+  depth-axis transform by the residual prefix sums reduced two-bit PPL damage
+  to +52.29%, versus +225.36% for identity message coordinates, but stored two
+  writes per layer and reached only 4.00x compression. Coding their exported
+  sum was worse: PCA and prefix-aware bases changed PPL by +320.11% and
+  +788.97% at 5.33x. The internal writes expose useful cancellation structure;
+  their sum is semantically correct but poorly matched to this scalar codec.
+- **Mechanistic phase boundaries are not rate-distortion boundaries.** On
+  24-layer Pythia-410M, adjacent update CKA/norm changes selected
+  `0–5–9–20–24`, broadly resembling short identify/plan phases, a long
+  production phase, and a short terminal phase. At the same four-anchor count,
+  this layout produced +660.65% PPL at 10.61x versus +138.82% for uniform
+  `0–6–12–18–24`. Adding a six-layer chain cap still produced +538.36% at
+  9.79x. A large computational regime change is not automatically a safe
+  point to quantize an anchor or change codebooks.
+- **Whole-stream repacking improves accounting, not quality.** A single
+  reader-aware block over all 24 Pythia-410M layers reached 14.11x compression
+  but +199.48% PPL. A single prefix-aware transform over all 48 attention/MLP
+  writes reached only 6.40x and +153.44% PPL. Larger objects amortize fixed
+  overhead as expected, but the current repacking distortion remains
+  incompatible with autoregressive cache reconstruction.
+- **Activation-weighted `down_proj` reveals a compact model-derived message
+  geometry.** On Qwen2.5-0.5B, weighting `down_proj` columns by observed gated
+  coefficient variance consistently improved raw weight SVD on held-out
+  messages. At rank 64 of residual width 896, intervening on MLP writes at four
+  sampled layers gave -0.57% PPL change, 0.263576 KL, and 92.06% top-1 on a
+  short held-out passage, versus +2.18%, 0.304945, and 84.13% for message PCA.
+  The negative PPL delta is treated as variation. This is evidence for learned
+  MLP-message packing geometry, but not yet persistent-state compression.
 
 ## 8. Limitations
 
