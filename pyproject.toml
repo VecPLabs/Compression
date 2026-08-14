@@ -40,8 +40,8 @@ gihkcc-blockwise-generation = "validate_blockwise_generation:main"
 gihkcc-quantized-kv-generation = "validate_quantized_kv_generation:main"
 
 [tool.setuptools]
-py-modules = ["aggregate_quantized_kv_results", "benchmark_blockwise", "benchmark_compression", "benchmark_downproj_geometry", "benchmark_downstream", "benchmark_message_repacking", "benchmark_real_residual", "benchmark_residual_repacking", "benchmark_runtime", "blockwise_attention", "blockwise_generation", "detect_residual_phases", "quantized_kv_generation", "residual_repacking", "scan_downproj_geometry", "triton_kernels", "sweep_layer_bits", "validate_autoregressive", "validate_blockwise_generation", "validate_downproj_geometry", "validate_quantized_kv_generation", "gihkcc", "gihkcc_v2", "gihkcc_hf", "kvtc", "pca_layer", "ternary", "turboquant", "turboquant_paper"]
+py-modules = ["aggregate_quantized_kv_results", "benchmark_blockwise", "benchmark_compression", "benchmark_downproj_geometry", "benchmark_downstream", "benchmark_dynamic_mlp_compression", "benchmark_message_repacking", "benchmark_real_residual", "benchmark_residual_repacking", "benchmark_runtime", "blockwise_attention", "blockwise_generation", "detect_residual_phases", "quantized_kv_generation", "residual_repacking", "scan_downproj_geometry", "triton_kernels", "sweep_layer_bits", "validate_autoregressive", "validate_blockwise_generation", "validate_downproj_geometry", "validate_quantized_kv_generation", "gihkcc", "gihkcc_v2", "gihkcc_hf", "kvtc", "pca_layer", "ternary", "turboquant", "turboquant_paper"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"
-testpaths = ["test_blockwise_attention.py", "test_gihkcc.py", "test_gihkcc_v2.py", "test_kvtc.py", "test_residual_repacking.py", "test_turboquant_paper.py"]
+testpaths = ["test_blockwise_attention.py", "test_dynamic_mlp_compression.py", "test_gihkcc.py", "test_gihkcc_v2.py", "test_kvtc.py", "test_residual_repacking.py", "test_turboquant_paper.py"]

@@ -1,4 +1,4 @@
-"""Scan MLP packing geometry across every Qwen layer under live intervention."""
+"""Scan MLP output-packing geometry across every supported transformer layer."""
 
 from __future__ import annotations
 
@@ -13,10 +13,27 @@ import torch.nn.functional as F
 from benchmark_downproj_geometry import covariance, effective_rank, top_basis
 
 
+def model_layers(model):
+    if hasattr(model, "gpt_neox"):
+        return model.gpt_neox.layers
+    if hasattr(model, "model") and hasattr(model.model, "layers"):
+        return model.model.layers
+    raise ValueError(f"Unsupported model architecture: {type(model).__name__}")
+
+
+def output_projection(layer):
+    mlp = layer.mlp
+    if hasattr(mlp, "down_proj"):
+        return mlp.down_proj
+    if hasattr(mlp, "dense_4h_to_h"):
+        return mlp.dense_4h_to_h
+    raise ValueError(f"Unsupported MLP architecture: {type(mlp).__name__}")
+
+
 def capture_downproj(model, token_ids):
     coefficients, messages, hooks = {}, {}, []
-    for layer_idx, layer in enumerate(model.model.layers):
-        module = layer.mlp.down_proj
+    for layer_idx, layer in enumerate(model_layers(model)):
+        module = output_projection(layer)
         hooks.append(module.register_forward_pre_hook(
             lambda _module, call, index=layer_idx: coefficients.setdefault(
                 index, call[0].detach().cpu().squeeze(0)
@@ -76,12 +93,14 @@ def main() -> int:
     records = []
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    print(f"model={args.model} layers={len(model.model.layers)} rank={args.rank} "
+    layers = model_layers(model)
+    print(f"model={args.model} layers={len(layers)} rank={args.rank} "
           f"cal={calibration_ids.shape[1]} eval={evaluation_ids.shape[1]}")
     print(f"{'layer':>5} {'basis':>12} {'msg MSE':>12} {'KL':>11} "
           f"{'PPL change':>12} {'top1':>9} {'eff rank':>10}")
-    for layer_idx, layer in enumerate(model.model.layers):
-        down = layer.mlp.down_proj.weight.detach().float().cpu()
+    for layer_idx, layer in enumerate(layers):
+        projection = output_projection(layer)
+        down = projection.weight.detach().float().cpu()
         variance = calibration_coefficients[layer_idx].float().var(0, unbiased=False)
         weighted = down * variance.sqrt().unsqueeze(0)
         permutation = torch.randperm(variance.numel(), generator=generator)
@@ -99,8 +118,7 @@ def main() -> int:
         for basis_name, basis in bases.items():
             restored = (message_test @ basis) @ basis.T
             message_mse = (restored - message_test).square().mean().item()
-            module = layer.mlp.down_proj
-            hook = module.register_forward_hook(
+            hook = projection.register_forward_hook(
                 lambda _module, _call, output, local_basis=basis: (
                     (output.float() @ local_basis.to(output.device))
                     @ local_basis.to(output.device).T

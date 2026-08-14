@@ -431,6 +431,28 @@ representation can diverge. Independently detected four-phase boundaries were
 0/4/12/16/24; the advantage is depth-dependent, but this single short run does
 not establish phase alignment.
 
+The same rank-64 all-layer protocol replicates on Pythia-410M, whose
+`dense_4h_to_h` is the architectural equivalent of `down_proj`. Active
+weighting again beat shuffled weighting in 22/24 layers and message PCA in
+11/24. Eight layers (3, 5, 6, 8, 9, 10, 13, 18) showed the stricter inversion:
+PCA had lower message MSE while the learned active basis had lower KL. The
+effective-rank median was 19.20 (range 1.50–37.99). Matching win counts across
+Qwen and Pythia are notable cross-family replication, but the 64-token
+holdouts remain too small for a generality claim.
+
+A first layer-dynamic allocator converts that observation into an allocation
+experiment. On Pythia-410M, ranks 64/128/256/512/768/1024 were profiled per
+layer on a separate passage, then an exact multiple-choice knapsack minimized
+the sum of isolated intervention KL under fixed total-rank budgets. Each chosen
+allocation was finally applied to all 24 MLP writes simultaneously on a third
+passage. Dynamic allocation beat uniform rank at every tested budget. At 3.1%
+coordinate savings, dynamic allocation reached +0.60% PPL, 0.01206 KL, and
+96.83% top-1 agreement, versus +9.51%, 0.09946, and 87.30% for uniform rank at
+the same total rank. At 6.3% savings, dynamic measured +3.77% PPL and 0.02831
+KL versus +8.72% and 0.12729 for uniform. This is transient MLP-message rank
+restriction—not weight, KV-cache, or end-to-end memory compression—and uses a
+short 64-token validation passage.
+
 ### With a HuggingFace model
 
 Install the optional integration dependencies first:

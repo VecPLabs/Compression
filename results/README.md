@@ -155,6 +155,31 @@ model-derived basis had lower downstream KL. The companion phase artifact,
 these are an exploratory overlay rather than evidence of causal phase
 alignment.
 
+The cross-family replication is
+`pythia410m_downproj_all_layers_r64_cal256_eval64.json`. Pythia-410M active
+`dense_4h_to_h` geometry also beat shuffled weighting in 22/24 layers and
+message PCA in 11/24 by KL. PCA reconstructed more accurately while the active
+basis preserved behavior better in layers 3, 5, 6, 8, 9, 10, 13, and 18. Its
+effective-rank median was 19.20 (range 1.50–37.99). The independently detected
+Pythia boundaries are 0/5/9/20/24; phase alignment remains exploratory.
+
+### Layer-dynamic MLP message rank allocation
+
+`pythia410m_dynamic_mlp_rank_corrected_cal256_profile64_eval64.json` contains
+the corrected Pythia-410M frontier. Basis calibration, layer sensitivity
+profiling, and simultaneous validation use separate text passages. At equal
+total rank, dynamic versus uniform results include:
+
+| Coordinate saving | Dynamic PPL / KL / top-1 | Uniform PPL / KL / top-1 |
+|---:|---:|---:|
+| 3.1% | +0.60% / 0.01206 / 96.83% | +9.51% / 0.09946 / 87.30% |
+| 6.3% | +3.77% / 0.02831 / 95.24% | +8.72% / 0.12729 / 87.30% |
+| 12.5% | +12.35% / 0.06332 / 92.06% | +26.67% / 0.23357 / 87.30% |
+| 25.0% | +34.34% / 0.21693 / 90.48% | +58.74% / 0.43806 / 76.19% |
+
+These percentages describe MLP-message coordinate rank, not model weights,
+KV-cache size, or measured application memory.
+
 ## Fixed configuration
 
 - Model: `EleutherAI/pythia-410m`

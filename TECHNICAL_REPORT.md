@@ -342,13 +342,32 @@ design space:
   revising the smaller-sample 8–20 estimate. An independent four-phase fit
   placed boundaries at 0/4/12/16/24, but one model and one short holdout are
   insufficient to claim that the geometry advantage tracks those boundaries.
+- **The result replicates across an architectural family.** Applying the same
+  rank-64 protocol to Pythia-410M's `dense_4h_to_h` projection produced the
+  same aggregate win counts: active weighting beat shuffled weighting in
+  22/24 layers and message PCA in 11/24. Eight layers (3, 5, 6, 8, 9, 10, 13,
+  18) had lower PCA reconstruction MSE but lower active-basis KL. Effective
+  rank had median 19.20 and range 1.50–37.99. This reduces the likelihood that
+  the observation is specific to Qwen's gated MLP, while short calibration and
+  holdout passages still prevent a broad generality claim.
+- **Layer-specific allocation dominates uniform rank restriction.** A
+  Pythia-410M profiler measured isolated live-intervention KL for ranks 64,
+  128, 256, 512, 768, and 1024 on a passage separate from calibration and
+  validation. An exact budget allocator selected per-layer ranks, which were
+  then applied simultaneously. Dynamic allocation improved every tested point.
+  At 3.1% coordinate savings it produced +0.60% PPL, 0.012061 KL, and 96.83%
+  top-1 agreement, versus +9.51%, 0.09946, and 87.30% for uniform rank at equal
+  total rank. At 6.3% savings it produced +3.77% PPL and 0.028312 KL, versus
+  +8.72% and 0.1273 for uniform. This validates sensitivity-aware allocation,
+  but savings apply only to represented transient MLP messages and the holdout
+  contains 64 tokens; no serving-memory reduction is established.
 
 ## 8. Limitations
 
 This report does not yet establish broad model or serving generality.
 
 1. The primary cache results use Pythia-410M; the message-geometry diagnostic
-   uses one additional small model, Qwen2.5-0.5B.
+   covers Pythia-410M and Qwen2.5-0.5B, both small models.
 2. Evaluation is limited to WikiText-2 teacher-forced decoding; downstream task
    accuracy has not yet been measured for the projected-cache path.
 3. Batch size is one. Compression may create more value by enabling larger
