@@ -491,6 +491,18 @@ disagreed. Folding is therefore retained as a reversible transform lead, not a
 validated GIHKCC improvement; future variants must allocate bits against
 projection-aware error rather than residual MSE or detail energy.
 
+Projection-aware allocation supplies that missing objective. Using disjoint
+64-token fold-fitting, 64-token allocation-profiling, and 128-token evaluation
+splits on Pythia-410M, an exact per-layer budget allocator improved static
+projected-K/V PSNR from 34.01 to 34.82 dB at the nominal 3-bit budget (4.94x
+versus 4.96x residual-payload compression). In live 128-token autoregressive
+validation, folded 3-bit GIHKCC reduced PPL change from +2.45% to +1.35%, KL
+from 0.01259 to 0.01204, and raised top-1 agreement from 92.19% to 94.53%, with
+9.87x versus 9.92x persistent-cache compression. The aggressive 2-bit point
+was mixed: top-1 improved, but PPL and KL worsened. Projection-aware folding is
+therefore a validated narrow Pareto improvement at 3 bits, not a universal
+replacement for direct coding.
+
 ### With a HuggingFace model
 
 Install the optional integration dependencies first:

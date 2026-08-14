@@ -393,6 +393,16 @@ design space:
   opposite residual and projected-quality ordering. Detail energy and residual
   MSE are therefore insufficient objectives; projection-aware bit allocation
   is required before folding can be considered beneficial.
+- **Projection-aware folded allocation yields a live 3-bit Pareto gain.** Fold
+  fitting, per-layer projected-K/V allocation profiling, and evaluation used
+  disjoint token splits. On static Pythia-410M residuals, allocation raised
+  projected-K/V PSNR from 34.01 to 34.82 dB at essentially equal nominal bits.
+  In 128-token live autoregressive validation, folded coding changed PPL by
+  +1.35% versus +2.45% direct, reduced KL from 0.012588 to 0.012041, and raised
+  top-1 agreement from 92.19% to 94.53%. Persistent-cache ratio was 9.87x
+  versus 9.92x. At 2 bits, folded coding improved top-1 but worsened PPL and KL,
+  so the result establishes a specific 3-bit Pareto point rather than uniform
+  dominance.
 
 ## 8. Limitations
 

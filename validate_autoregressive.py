@@ -29,6 +29,9 @@ from residual_repacking import (
     compress_adjacent_repacked, compress_blockwise_repacked,
     compress_message_block,
 )
+from residual_folding import (
+    compress_folded_adjacent, decompress_folded_adjacent, fit_fold,
+)
 from turboquant_paper import paper_turboquant_compress, paper_turboquant_decompress
 
 
@@ -177,7 +180,25 @@ def compress_residual_history(
     repacking_bases=None, repacking_block_size: int | None = None,
     repacking_protected_fraction: float | None = None,
     repacking_boundaries: list[int] | None = None,
+    folding_allocation=None, folding_specs=None,
 ):
+    if folding_allocation is not None:
+        if capture_point != "residual":
+            raise ValueError("folding requires residual capture")
+        if len(folding_allocation) != len(residuals) - 1:
+            raise ValueError("folding allocation must cover every delta layer")
+        if folding_specs is None:
+            folding_specs = [
+                fit_fold(
+                    residuals[index] - residuals[index - 1],
+                    "correlation_lifting", 1234 + index,
+                )
+                for index in range(1, len(residuals))
+            ]
+        stack = compress_folded_adjacent(
+            residuals, folding_specs, folding_allocation, anchor_bits=8
+        )
+        return stack, decompress_folded_adjacent(stack)
     if repacking:
         if capture_point != "residual" or not isinstance(delta_bits, int):
             raise ValueError("repacking requires residual capture and uniform bits")
@@ -310,6 +331,7 @@ def evaluate(
     repacking_block_size: int | None = None,
     repacking_protected_fraction: float | None = None,
     repacking_boundaries: list[int] | None = None,
+    folding_allocation=None,
 ):
     prefix_ids = tokens[:, :prefix]
     with capture_layer_inputs(model, capture_point) as captured:
@@ -324,8 +346,10 @@ def evaluate(
         repacking_block_size=repacking_block_size,
         repacking_protected_fraction=repacking_protected_fraction,
         repacking_boundaries=repacking_boundaries,
+        folding_allocation=folding_allocation,
     )
     locked_repacking_bases = getattr(compressed_stack, "bases", None)
+    locked_folding_specs = getattr(compressed_stack, "specs", None)
     locked_ln_seeds = None
     if ln_aware_candidates > 1:
         locked_ln_seeds = [
@@ -372,6 +396,7 @@ def evaluate(
                 repacking, locked_repacking_bases, repacking_block_size,
                 repacking_protected_fraction,
                 repacking_boundaries,
+                folding_allocation, locked_folding_specs,
             )
             # The model appended an uncompressed current-token entry in place.
             # Remove it and replace it with K/V projected from the decoded state.
@@ -387,6 +412,7 @@ def evaluate(
                 repacking, locked_repacking_bases, repacking_block_size,
                 repacking_protected_fraction,
                 repacking_boundaries,
+                folding_allocation, locked_folding_specs,
             )
             compressed_cache = build_neox_cache(model, decoded, capture_point)
 
@@ -397,6 +423,7 @@ def evaluate(
             repacking, locked_repacking_bases, repacking_block_size,
             repacking_protected_fraction,
             repacking_boundaries,
+            folding_allocation, locked_folding_specs,
         )
     ratio = native_kv_bytes(model, prefix + available) / compressed_stack.compressed_bytes
     return {
@@ -552,6 +579,14 @@ def main() -> int:
         ),
         help="Jointly compress attention/MLP writes across message depth",
     )
+    parser.add_argument(
+        "--folding-artifact",
+        help="Projection-aware folding result JSON supplying a fixed allocation",
+    )
+    parser.add_argument(
+        "--folding-target-bits", type=int, choices=(2, 3), default=3,
+        help="Target-bit allocation to select from --folding-artifact",
+    )
     args = parser.parse_args()
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -595,6 +630,19 @@ def main() -> int:
         [int(value) for value in args.repacking_boundaries.split(",")]
         if args.repacking_boundaries else None
     )
+    folding_allocation = None
+    if args.folding_artifact:
+        folding_report = json.loads(
+            Path(args.folding_artifact).read_text(encoding="utf-8")
+        )
+        matches = [
+            record for record in folding_report["records"]
+            if record["strategy"] == "projection_aware_folded"
+            and record["target_bits"] == args.folding_target_bits
+        ]
+        if len(matches) != 1:
+            raise ValueError("folding artifact does not contain one matching allocation")
+        folding_allocation = [tuple(pair) for pair in matches[0]["allocation"]]
     if args.message_repacking:
         if not isinstance(allocation, int):
             raise ValueError("message repacking requires uniform --bits")
@@ -609,6 +657,7 @@ def main() -> int:
             args.repacking, args.repacking_block_size,
             args.repacking_protected_fraction,
             repacking_boundaries,
+            folding_allocation,
         )
     relative = result["compressed_ppl"] / result["baseline_ppl"] - 1
     print(f"\nTeacher-forced autoregressive validation ({result['tokens']} tokens)")
@@ -622,6 +671,7 @@ def main() -> int:
     print(f"  protected fraction:      {args.repacking_protected_fraction if args.repacking_protected_fraction is not None else 'none'}")
     print(f"  repacking boundaries:    {repacking_boundaries or 'none'}")
     print(f"  message repacking:       {args.message_repacking or 'none'}")
+    print(f"  projection-aware fold:   {args.folding_target_bits if folding_allocation else 'none'}")
     print(f"  FP16-cache baseline PPL: {result['baseline_ppl']:.4f}")
     label = args.layer_bits or f"{args.bits}-bit"
     print(f"  GIHKCC {label} PPL:    {result['compressed_ppl']:.4f}")
@@ -649,6 +699,10 @@ def main() -> int:
             "repacking_protected_fraction": args.repacking_protected_fraction,
             "repacking_boundaries": repacking_boundaries,
             "message_repacking": args.message_repacking,
+            "folding_artifact": args.folding_artifact,
+            "folding_target_bits": (
+                args.folding_target_bits if folding_allocation else None
+            ),
             "device": device,
             "torch_version": torch.__version__,
             "cuda_version": torch.version.cuda,

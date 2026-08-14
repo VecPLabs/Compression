@@ -6,12 +6,32 @@ from dataclasses import dataclass
 
 import torch
 
+from turboquant_paper import (
+    PaperTurboQuantCompressed, paper_turboquant_compress,
+    paper_turboquant_decompress,
+)
+
 
 @dataclass
 class FoldSpec:
     permutation: torch.Tensor
     alpha: torch.Tensor
     update: float = 0.0
+
+
+@dataclass
+class FoldedPredictiveStack:
+    anchor: PaperTurboQuantCompressed
+    details: list[tuple[PaperTurboQuantCompressed, PaperTurboQuantCompressed]]
+    specs: list[FoldSpec]
+    allocation: list[tuple[int, int]]
+
+    @property
+    def compressed_bytes(self):
+        return self.anchor.compressed_bytes + 8 + sum(
+            coarse.compressed_bytes + detail.compressed_bytes + 8
+            for coarse, detail in self.details
+        )
 
 
 def fit_fold(samples: torch.Tensor, mode: str, seed: int = 1234) -> FoldSpec:
@@ -66,4 +86,39 @@ def unfold(coarse: torch.Tensor, detail: torch.Tensor, spec: FoldSpec):
     )
     restored[..., 0::2] = left
     restored[..., 1::2] = right
+    return restored
+
+
+def compress_folded_adjacent(states, specs, allocation, anchor_bits=8):
+    if len(specs) != len(states) - 1 or len(allocation) != len(states) - 1:
+        raise ValueError("fold specs and allocation must cover every delta layer")
+    anchor = paper_turboquant_compress(states[0], anchor_bits)
+    previous = paper_turboquant_decompress(anchor)
+    details = []
+    for state, spec, (coarse_bits, detail_bits) in zip(
+        states[1:], specs, allocation
+    ):
+        prediction_error = state - previous
+        coarse, detail = fold(prediction_error, spec)
+        coarse_payload = paper_turboquant_compress(coarse, coarse_bits)
+        detail_payload = paper_turboquant_compress(detail, detail_bits)
+        decoded_error = unfold(
+            paper_turboquant_decompress(coarse_payload),
+            paper_turboquant_decompress(detail_payload), spec,
+        )
+        previous = (previous.float() + decoded_error).to(state.dtype)
+        details.append((coarse_payload, detail_payload))
+    return FoldedPredictiveStack(anchor, details, specs, allocation)
+
+
+def decompress_folded_adjacent(stack):
+    restored = [paper_turboquant_decompress(stack.anchor)]
+    for (coarse_payload, detail_payload), spec in zip(stack.details, stack.specs):
+        decoded_error = unfold(
+            paper_turboquant_decompress(coarse_payload),
+            paper_turboquant_decompress(detail_payload), spec,
+        )
+        restored.append(
+            (restored[-1].float() + decoded_error).to(restored[-1].dtype)
+        )
     return restored

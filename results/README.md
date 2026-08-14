@@ -217,6 +217,23 @@ and 4.93x versus 4.96x compression. At nominal 2 bits the residual improvement
 did not preserve projected K/V. These are static reconstruction diagnostics,
 not live autoregressive quality results.
 
+### Projection-aware folded allocation
+
+`pythia410m_projection_aware_folding_fit64_profile64_eval128.json` fits
+correlation folds, profiles per-layer coarse/detail precision against projected
+K/V error, and evaluates on three disjoint token splits. At nominal 3 bits it
+reached 34.82 dB projected-K/V PSNR and 4.94x residual-payload compression,
+versus 34.01 dB and 4.96x for uniform direct adjacent coding.
+
+Live 128-token artifacts use the
+`pythia410m_*folding*live_prefix32_steps128.json` and
+`pythia410m_direct_adjacent_*fold_control.json` names. At 3 bits, folded versus
+direct results were +1.35% versus +2.45% PPL, 0.012041 versus 0.012588 KL,
+94.53% versus 92.19% top-1, and 9.87x versus 9.92x persistent-cache ratio. At
+2 bits, folding measured +12.09% PPL and 0.06449 KL versus +10.30% and 0.04967
+direct, despite higher top-1 agreement. The positive claim is restricted to
+the 3-bit operating point and this short held-out passage.
+
 ## Fixed configuration
 
 - Model: `EleutherAI/pythia-410m`
