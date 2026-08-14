@@ -382,6 +382,17 @@ design space:
   reached KL 3–7. This falsifies the present no-training reader-basis method,
   not all trainable conditional-width architectures. It also distinguishes
   compact individual MLP writes from the causally accumulated residual state.
+- **Reversible residual folding reshapes error but is not yet a codec win.**
+  Width-wise Haar and learned lifting transforms were fit on calibration tokens
+  and applied to decoder-visible adjacent GIHKCC errors. All transforms are
+  exactly invertible before quantization. Pythia-70M showed a small 0.11–0.18
+  dB projected-K/V benefit for equal-bit Haar, but Pythia-410M did not replicate
+  it. On the deeper model, correlation lifting with 4-bit coarse/2-bit detail
+  improved residual PSNR by 1.03 dB while projected-K/V PSNR improved only 0.10
+  dB and compression declined from 4.96x to 4.93x. The aggressive point showed
+  opposite residual and projected-quality ordering. Detail energy and residual
+  MSE are therefore insufficient objectives; projection-aware bit allocation
+  is required before folding can be considered beneficial.
 
 ## 8. Limitations
 

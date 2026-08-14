@@ -204,6 +204,19 @@ passage measured +13,438% PPL, 4.3735 KL, and 22.22% top-1; transfer measured
 viable operating point. This result rules out the tested static post-training
 basis; it does not test a transformer trained to use conditional width.
 
+### Reversible residual folding (mixed/negative result)
+
+`pythia70m_residual_folding_cal128_eval128.json` and
+`pythia410m_residual_folding_cal128_eval128.json` test adjacent Haar, random,
+and correlation-matched lifting on held-out residuals and decoder-visible
+adjacent GIHKCC deltas. Equal-bit Haar gained 0.11–0.18 dB projected-K/V PSNR
+on the six-layer model but not on the 24-layer model. The best deeper-model
+point was correlation lifting at coarse-4/detail-2 versus direct 3-bit deltas:
+21.60 versus 20.57 dB residual PSNR, 34.19 versus 34.09 dB projected-K/V PSNR,
+and 4.93x versus 4.96x compression. At nominal 2 bits the residual improvement
+did not preserve projected K/V. These are static reconstruction diagnostics,
+not live autoregressive quality results.
+
 ## Fixed configuration
 
 - Model: `EleutherAI/pythia-410m`

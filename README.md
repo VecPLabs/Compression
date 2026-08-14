@@ -478,6 +478,19 @@ quality was unusable: even 6.3% coordinate reduction produced +13,438% PPL and
 mid-layer rank-768 interventions already reached KL 3–7. The current static
 reader basis therefore does not expose removable residual width.
 
+Reversible hidden-width folding was tested as an entropy transform inside the
+adjacent closed-loop GIHKCC residual path. Adjacent Haar, random-pair lifting,
+and held-out correlation-matched lifting all round-trip exactly before
+quantization. On Pythia-70M, equal-bit Haar improved projected-K/V PSNR by
+0.11–0.18 dB with about 1% payload overhead. The gain did not survive the
+24-layer Pythia-410M chain: 3-bit Haar measured 34.04 dB versus 34.09 dB direct.
+Correlation lifting with 4-bit coarse and 2-bit detail improved residual PSNR
+by 1.03 dB but projected-K/V PSNR by only 0.10 dB (34.19 versus 34.09), while
+ratio fell from 4.96x to 4.93x. At 2 bits, residual and projected quality even
+disagreed. Folding is therefore retained as a reversible transform lead, not a
+validated GIHKCC improvement; future variants must allocate bits against
+projection-aware error rather than residual MSE or detail energy.
+
 ### With a HuggingFace model
 
 Install the optional integration dependencies first:
