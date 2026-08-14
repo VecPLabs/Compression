@@ -194,6 +194,16 @@ zero. Mean KL was 0.17305, 0.17924, 0.21576, and 0.36913 respectively. The
 32-token intervention holdout makes this diagnostic evidence, not a broad
 generality claim.
 
+### Dynamic residual width (negative result)
+
+`pythia410m_dynamic_residual_width_reader_oracle_n64.json` tests direct
+residual-stream restriction using nested next-reader weight bases and an
+oracle sequence-by-layer allocator. At 6.3% coordinate reduction, the oracle
+passage measured +13,438% PPL, 4.3735 KL, and 22.22% top-1; transfer measured
++1,617%, 2.8003, and 25.40%. Uniform restriction was worse, but neither is a
+viable operating point. This result rules out the tested static post-training
+basis; it does not test a transformer trained to use conditional width.
+
 ## Fixed configuration
 
 - Model: `EleutherAI/pythia-410m`

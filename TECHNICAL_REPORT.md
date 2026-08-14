@@ -372,6 +372,16 @@ design space:
   compared with 0.17924 active, 0.17305 PCA, and 0.21576 joint. The result
   supports a prompt-dependent active geometry but not a simple phase
   discontinuity or first-order gradient-conditioned compression basis.
+- **Post-training dynamic residual width fails the viability threshold.** A
+  next-reader weight basis was used to restrict every Pythia-410M block input,
+  with sequence-specific oracle allocation over widths 256/512/768/1024.
+  Allocation usually beat equal-budget uniform restriction, but simultaneous
+  quality remained catastrophic. At only 6.3% coordinate reduction, oracle
+  PPL changed by +13,438% with 4.3735 KL; on a separate transfer passage it was
+  +1,617% and 2.8003 KL. Even isolated rank-768 interventions in middle layers
+  reached KL 3–7. This falsifies the present no-training reader-basis method,
+  not all trainable conditional-width architectures. It also distinguishes
+  compact individual MLP writes from the causally accumulated residual state.
 
 ## 8. Limitations
 

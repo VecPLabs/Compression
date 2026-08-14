@@ -467,6 +467,17 @@ active geometry and 0.173 for PCA. Thus prompt-conditioned usage is a real
 dynamic variable, while this first-order Fisher construction and the proposed
 phase-boundary alignment are negative results.
 
+A direct post-training dynamic residual-width test is also negative. At every
+block input, a nested basis was constructed from that block's attention and
+MLP reader weight Gram matrix. An oracle passage supplied isolated layer/rank
+KL for widths 256/512/768/1024, an exact allocator selected sequence-by-layer
+widths, and the schedule was applied simultaneously on oracle and transfer
+passages. Although allocation beat uniform width at most non-extreme budgets,
+quality was unusable: even 6.3% coordinate reduction produced +13,438% PPL and
+4.3735 KL on the oracle passage (+1,617% and 2.8003 KL on transfer). Individual
+mid-layer rank-768 interventions already reached KL 3–7. The current static
+reader basis therefore does not expose removable residual width.
+
 ### With a HuggingFace model
 
 Install the optional integration dependencies first:
