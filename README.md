@@ -453,6 +453,20 @@ KL versus +8.72% and 0.12729 for uniform. This is transient MLP-message rank
 restriction—not weight, KV-cache, or end-to-end memory compression—and uses a
 short 64-token validation passage.
 
+We then tested whether the layerwise geometry forms a depth phase field and
+whether next-token gradients supply the missing sensitivity variable. On
+Pythia-410M, three 64-token calibration domains produced strongly
+prompt-conditioned active-write subspaces: mean same-layer cross-domain
+similarity was 0.568, ranging from 0.244 to 0.818. However, independently
+detected phase boundaries were not subspace discontinuities at rank 64: mean
+adjacent similarity was 0.210 at boundaries versus 0.197 elsewhere. On a
+separate 32-token intervention passage, message PCA won 14/24 layers, active
+`dense_4h_to_h` geometry won 8/24, and a joint write-times-Fisher basis won
+2/24. Fisher-only geometry won none and had mean KL 0.369, versus 0.179 for
+active geometry and 0.173 for PCA. Thus prompt-conditioned usage is a real
+dynamic variable, while this first-order Fisher construction and the proposed
+phase-boundary alignment are negative results.
+
 ### With a HuggingFace model
 
 Install the optional integration dependencies first:

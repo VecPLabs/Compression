@@ -180,6 +180,20 @@ total rank, dynamic versus uniform results include:
 These percentages describe MLP-message coordinate rank, not model weights,
 KV-cache size, or measured application memory.
 
+### Prompt- and gradient-conditioned geometry field
+
+`pythia410m_mlp_geometry_field_r64_cal3x64_eval32.json` compares rank-64
+active output-projection, message-PCA, Fisher-only, and joint write-times-Fisher
+bases. Three calibration domains are separate from the intervention passage.
+Same-layer cross-domain active-basis similarity averaged 0.568 (range
+0.244–0.818), demonstrating input-conditioned usage. Phase-boundary adjacent
+similarity averaged 0.210 versus 0.197 elsewhere, so the independently detected
+boundaries are not active-subspace discontinuities in this run. Message PCA won
+14/24 held-out interventions, active geometry 8, joint geometry 2, and Fisher
+zero. Mean KL was 0.17305, 0.17924, 0.21576, and 0.36913 respectively. The
+32-token intervention holdout makes this diagnostic evidence, not a broad
+generality claim.
+
 ## Fixed configuration
 
 - Model: `EleutherAI/pythia-410m`

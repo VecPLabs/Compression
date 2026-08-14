@@ -361,6 +361,17 @@ design space:
   +8.72% and 0.1273 for uniform. This validates sensitivity-aware allocation,
   but savings apply only to represented transient MLP messages and the holdout
   contains 64 tokens; no serving-memory reduction is established.
+- **Prompt-conditioned usage is dynamic; the first Fisher/phase hypotheses are
+  negative.** Across science, narrative, and code calibration passages,
+  same-layer active-write subspace similarity averaged 0.568 and ranged from
+  0.244 to 0.818. The independently detected Pythia phase boundaries did not
+  show lower adjacent similarity: boundary mean was 0.210 versus 0.197 away
+  from boundaries. On a separate 32-token live-intervention passage, message
+  PCA won 14/24 layers, active output-projection geometry won 8, and a joint
+  write-times-Fisher basis won 2. Fisher-only won none; mean KL was 0.36913,
+  compared with 0.17924 active, 0.17305 PCA, and 0.21576 joint. The result
+  supports a prompt-dependent active geometry but not a simple phase
+  discontinuity or first-order gradient-conditioned compression basis.
 
 ## 8. Limitations
 
