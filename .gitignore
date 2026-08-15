@@ -14,3 +14,4 @@ build/
 *.pth
 *.safetensors
 checkpoints/
+.codex-remote-attachments/019fdfb1-a237-70e3-aecf-f4239982b374/9fb3ca8b-9765-48fe-9e74-fc02ffebae00/1-Photo-1.jpg
