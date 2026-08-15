@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-08-14T04:37:57.480535+00:00",
+  "timestamp_utc": "2026-08-15T04:40:59.012541+00:00",
   "model": "C:\\Users\\David\\.cache\\huggingface\\hub\\models--EleutherAI--pythia-410m\\snapshots\\9879c9b5f8bea9051dcb0e68dff21493d67e9d4f",
   "model_revision": null,
   "dataset": "Salesforce/wikitext",
@@ -17,18 +17,21 @@
   "repacking_protected_fraction": null,
   "repacking_boundaries": null,
   "message_repacking": null,
-  "folding_artifact": "results/pythia410m_projection_aware_folding_fit64_profile64_eval128.json",
+  "folding_artifact": "results/pythia410m_projection_aware_folding_fixed_fit64_profile64_eval128.json",
+  "folding_strategy": "uniform_folded",
   "folding_target_bits": 3,
+  "direct_allocation_artifact": null,
+  "direct_allocation_target_bits": null,
   "device": "cpu",
   "torch_version": "2.13.0+cpu",
   "cuda_version": null,
   "result": {
     "tokens": 128,
     "baseline_ppl": 25.993801399754297,
-    "compressed_ppl": 26.34600697027066,
-    "mean_kl": 0.012041480483219402,
+    "compressed_ppl": 26.157744750133517,
+    "mean_kl": 0.015840536309553954,
     "top1_agreement": 0.9453125,
     "persistent_ratio": 9.871613988401577
   },
-  "relative_ppl_change": 0.013549598425403486
+  "relative_ppl_change": 0.006307017117579861
 }

@@ -219,20 +219,20 @@ not live autoregressive quality results.
 
 ### Projection-aware folded allocation
 
-`pythia410m_projection_aware_folding_fit64_profile64_eval128.json` fits
-correlation folds, profiles per-layer coarse/detail precision against projected
-K/V error, and evaluates on three disjoint token splits. At nominal 3 bits it
-reached 34.82 dB projected-K/V PSNR and 4.94x residual-payload compression,
-versus 34.01 dB and 4.96x for uniform direct adjacent coding.
+`pythia410m_projection_aware_folding_fixed_fit64_profile64_eval128.json` fits
+and serializes model-fixed correlation folds, profiles per-layer coarse/detail
+precision against projected K/V error, and evaluates on disjoint token splits.
+At nominal 3 bits it reached 34.82 dB projected-K/V PSNR and 4.94x payload
+compression, versus 34.30 dB for projection-aware direct allocation and 34.01
+dB/4.96x for uniform direct coding. Serialized fold metadata is approximately
+276 KB and is treated as model metadata, not cache payload.
 
-Live 128-token artifacts use the
-`pythia410m_*folding*live_prefix32_steps128.json` and
-`pythia410m_direct_adjacent_*fold_control.json` names. At 3 bits, folded versus
-direct results were +1.35% versus +2.45% PPL, 0.012041 versus 0.012588 KL,
-94.53% versus 92.19% top-1, and 9.87x versus 9.92x persistent-cache ratio. At
-2 bits, folding measured +12.09% PPL and 0.06449 KL versus +10.30% and 0.04967
-direct, despite higher top-1 agreement. The positive claim is restricted to
-the 3-bit operating point and this short held-out passage.
+`pythia410m_folding_fixed_multi_offset_summary.json` aggregates three frozen
+128-token live offsets. Folded versus uniform direct coding produced +0.98%
+versus +2.45% aggregate PPL change, but 0.01550 versus 0.01151 mean KL and
+92.71% versus 95.05% top-1. Individual offsets reverse ordering. The static
+projection result survives the allocation-only control; the live Pareto claim
+does not survive passage expansion.
 
 ## Fixed configuration
 

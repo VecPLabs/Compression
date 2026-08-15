@@ -1,0 +1,21 @@
+{
+  "model": "EleutherAI/pythia-410m",
+  "bits": 3,
+  "prefix": 32,
+  "steps_per_offset": 128,
+  "offsets": [0, 128, 256],
+  "model_fixed_fold_metadata_bytes_json": 276264,
+  "projection_aware_folded": {
+    "persistent_ratio": 9.871613988401577,
+    "geometric_aggregate_ppl_change": 0.00983763276244276,
+    "mean_kl": 0.015502229569136716,
+    "mean_top1_agreement": 0.9270833333333334
+  },
+  "uniform_direct": {
+    "persistent_ratio": 9.920878411109317,
+    "geometric_aggregate_ppl_change": 0.02451330134550611,
+    "mean_kl": 0.011513664364879143,
+    "mean_top1_agreement": 0.9505208333333334
+  },
+  "conclusion": "Folded coding improves aggregate PPL but worsens KL and top-1; no robust live Pareto dominance."
+}

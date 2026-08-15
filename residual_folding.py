@@ -19,6 +19,22 @@ class FoldSpec:
     update: float = 0.0
 
 
+def fold_spec_to_dict(spec: FoldSpec):
+    return {
+        "permutation": spec.permutation.tolist(),
+        "alpha": spec.alpha.tolist(),
+        "update": spec.update,
+    }
+
+
+def fold_spec_from_dict(value):
+    return FoldSpec(
+        permutation=torch.tensor(value["permutation"], dtype=torch.long),
+        alpha=torch.tensor(value["alpha"], dtype=torch.float32),
+        update=float(value.get("update", 0.0)),
+    )
+
+
 @dataclass
 class FoldedPredictiveStack:
     anchor: PaperTurboQuantCompressed

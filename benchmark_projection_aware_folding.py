@@ -12,7 +12,7 @@ from benchmark_compression import measure, tensor_bytes
 from benchmark_residual_folding import quantize
 from benchmark_real_residual import project_neox_kv
 from gihkcc_v2 import GIHKCCV2Config, compress_predictive_stack, decompress_predictive_stack
-from residual_folding import FoldSpec, fit_fold, fold, unfold
+from residual_folding import FoldSpec, fit_fold, fold, fold_spec_to_dict, unfold
 
 
 def project_layer_kv(model, layer_index, residual):
@@ -69,6 +69,37 @@ def optimize_allocation(model, states, specs, target_bits):
         states_by_cost = expanded
     if budget not in states_by_cost:
         raise RuntimeError(f"no allocation exactly matches nominal {target_bits}-bit budget")
+    score, allocation = states_by_cost[budget]
+    return allocation, score
+
+
+def optimize_direct_allocation(model, states, target_bits):
+    candidates = [1, 2, 3] if target_bits == 2 else [2, 3, 4, 5]
+    profiles = []
+    for layer_index in range(1, len(states)):
+        error = states[layer_index] - states[layer_index - 1]
+        layer_records = []
+        for bits in candidates:
+            decoded_error, _ = quantize(error, bits)
+            restored = states[layer_index - 1].float() + decoded_error.float()
+            layer_records.append((
+                bits, bits,
+                projection_sse(model, layer_index, states[layer_index], restored),
+            ))
+        profiles.append(layer_records)
+    budget = target_bits * (len(states) - 1)
+    states_by_cost = {0: (0.0, [])}
+    for layer_records in profiles:
+        expanded = {}
+        for prior_cost, (prior_error, allocation) in states_by_cost.items():
+            for cost, choice, error in layer_records:
+                total = prior_cost + cost
+                if total > budget:
+                    continue
+                candidate = (prior_error + error, allocation + [choice])
+                if total not in expanded or candidate[0] < expanded[total][0]:
+                    expanded[total] = candidate
+        states_by_cost = expanded
     score, allocation = states_by_cost[budget]
     return allocation, score
 
@@ -163,6 +194,23 @@ def main() -> int:
         }
         uniform.update(evaluate(model, evaluation, restored, payload_bytes))
         records.append(uniform)
+        direct_allocation, direct_profile_score = optimize_direct_allocation(
+            model, profile, target_bits
+        )
+        layer_bits = [8] + direct_allocation
+        allocated_direct_stack = compress_predictive_stack(
+            evaluation, 8, layer_bits, config
+        )
+        allocated_direct = {
+            "strategy": "projection_aware_direct", "target_bits": target_bits,
+            "allocation": direct_allocation,
+            "profile_projected_sse": direct_profile_score,
+        }
+        allocated_direct.update(evaluate(
+            model, evaluation, decompress_predictive_stack(allocated_direct_stack),
+            allocated_direct_stack.compressed_bytes,
+        ))
+        records.append(allocated_direct)
         direct_stack = compress_predictive_stack(evaluation, 8, target_bits, config)
         direct = {
             "strategy": "uniform_direct", "target_bits": target_bits,
@@ -178,6 +226,7 @@ def main() -> int:
     report = {
         "model": args.model, "fit_tokens": len(fit[0]),
         "profile_tokens": len(profile[0]), "evaluation_tokens": len(evaluation[0]),
+        "fold_specs": [fold_spec_to_dict(spec) for spec in specs],
         "records": records, "complete": True,
     }
     output = Path(args.output)

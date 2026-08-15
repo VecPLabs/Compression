@@ -31,6 +31,7 @@ from residual_repacking import (
 )
 from residual_folding import (
     compress_folded_adjacent, decompress_folded_adjacent, fit_fold,
+    fold_spec_from_dict,
 )
 from turboquant_paper import paper_turboquant_compress, paper_turboquant_decompress
 
@@ -331,7 +332,7 @@ def evaluate(
     repacking_block_size: int | None = None,
     repacking_protected_fraction: float | None = None,
     repacking_boundaries: list[int] | None = None,
-    folding_allocation=None,
+    folding_allocation=None, folding_specs=None,
 ):
     prefix_ids = tokens[:, :prefix]
     with capture_layer_inputs(model, capture_point) as captured:
@@ -347,6 +348,7 @@ def evaluate(
         repacking_protected_fraction=repacking_protected_fraction,
         repacking_boundaries=repacking_boundaries,
         folding_allocation=folding_allocation,
+        folding_specs=folding_specs,
     )
     locked_repacking_bases = getattr(compressed_stack, "bases", None)
     locked_folding_specs = getattr(compressed_stack, "specs", None)
@@ -587,6 +589,18 @@ def main() -> int:
         "--folding-target-bits", type=int, choices=(2, 3), default=3,
         help="Target-bit allocation to select from --folding-artifact",
     )
+    parser.add_argument(
+        "--folding-strategy",
+        choices=("projection_aware_folded", "uniform_folded"),
+        default="projection_aware_folded",
+    )
+    parser.add_argument(
+        "--direct-allocation-artifact",
+        help="Projection-aware result JSON supplying direct per-layer delta bits",
+    )
+    parser.add_argument(
+        "--direct-allocation-target-bits", type=int, choices=(2, 3), default=3,
+    )
     args = parser.parse_args()
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -630,19 +644,35 @@ def main() -> int:
         [int(value) for value in args.repacking_boundaries.split(",")]
         if args.repacking_boundaries else None
     )
+    if args.direct_allocation_artifact:
+        direct_report = json.loads(
+            Path(args.direct_allocation_artifact).read_text(encoding="utf-8")
+        )
+        matches = [
+            record for record in direct_report["records"]
+            if record["strategy"] == "projection_aware_direct"
+            and record["target_bits"] == args.direct_allocation_target_bits
+        ]
+        if len(matches) != 1:
+            raise ValueError("direct allocation artifact has no unique matching allocation")
+        allocation = [8] + [int(bits) for bits in matches[0]["allocation"]]
     folding_allocation = None
+    folding_specs = None
     if args.folding_artifact:
         folding_report = json.loads(
             Path(args.folding_artifact).read_text(encoding="utf-8")
         )
         matches = [
             record for record in folding_report["records"]
-            if record["strategy"] == "projection_aware_folded"
+            if record["strategy"] == args.folding_strategy
             and record["target_bits"] == args.folding_target_bits
         ]
         if len(matches) != 1:
             raise ValueError("folding artifact does not contain one matching allocation")
         folding_allocation = [tuple(pair) for pair in matches[0]["allocation"]]
+        folding_specs = [
+            fold_spec_from_dict(spec) for spec in folding_report["fold_specs"]
+        ]
     if args.message_repacking:
         if not isinstance(allocation, int):
             raise ValueError("message repacking requires uniform --bits")
@@ -658,6 +688,7 @@ def main() -> int:
             args.repacking_protected_fraction,
             repacking_boundaries,
             folding_allocation,
+            folding_specs,
         )
     relative = result["compressed_ppl"] / result["baseline_ppl"] - 1
     print(f"\nTeacher-forced autoregressive validation ({result['tokens']} tokens)")
@@ -700,8 +731,14 @@ def main() -> int:
             "repacking_boundaries": repacking_boundaries,
             "message_repacking": args.message_repacking,
             "folding_artifact": args.folding_artifact,
+            "folding_strategy": args.folding_strategy if folding_allocation else None,
             "folding_target_bits": (
                 args.folding_target_bits if folding_allocation else None
+            ),
+            "direct_allocation_artifact": args.direct_allocation_artifact,
+            "direct_allocation_target_bits": (
+                args.direct_allocation_target_bits
+                if args.direct_allocation_artifact else None
             ),
             "device": device,
             "torch_version": torch.__version__,

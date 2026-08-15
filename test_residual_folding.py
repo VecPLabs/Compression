@@ -3,7 +3,7 @@ import torch
 
 from residual_folding import (
     compress_folded_adjacent, decompress_folded_adjacent,
-    fit_fold, fold, unfold,
+    fit_fold, fold, fold_spec_from_dict, fold_spec_to_dict, unfold,
 )
 
 
@@ -25,3 +25,12 @@ def test_folded_predictive_stack_round_trip_has_real_payload():
     restored = decompress_folded_adjacent(stack)
     assert len(restored) == len(states)
     assert stack.compressed_bytes > 0
+
+
+def test_fold_spec_serialization_round_trip():
+    values = torch.randn(12, 16)
+    spec = fit_fold(values, "correlation_lifting")
+    restored = fold_spec_from_dict(fold_spec_to_dict(spec))
+    assert torch.equal(restored.permutation, spec.permutation)
+    assert torch.allclose(restored.alpha, spec.alpha)
+    assert restored.update == spec.update
